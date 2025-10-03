@@ -98,25 +98,38 @@
         /* Slightly lighter background for the body rows */
         background: #252525; 
     }
+    
+    /* MODIFIED: .event-name is now the flex container for icon and text details */
     .event-name {
         font-weight: 500;
-        /* Default text color for event name */
         color: #e0e0e0; 
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px; /* Space between icon and text details */
+    }
+    
+    /* NEW: Icon styling */
+    .event-icon {
+        width: 30px;  /* Set a fixed size for the icon */
+        height: 30px;
+        flex-shrink: 0; /* Prevents the icon from shrinking */
+        object-fit: contain; /* Ensure the image scales nicely */
     }
     
     .event-details {
+        /* Ensure this takes up the available space and acts as the tooltip trigger */
         display: flex;
         flex-direction: column;
+        position: relative; /* Keep this for the tooltip positioning */
+        cursor: pointer;
     }
     .event-title {
         font-weight: 500;
         color: #e0e0e0;
     }
+    /* Smaller next time text to reduce dead space */
     .next-time {
-        font-size: 11px;
+        font-size: 10px; 
         /* Muted next time text */
         color: #b0b0b0; 
         margin-top: 4px;
@@ -167,7 +180,72 @@
         border: 1px solid #66bb6a40; /* Very light green border */
         background: rgba(76, 175, 80, 0.1); /* Subtle green background */
     }
-    
+
+    /* --- TOOLTIP STYLES (MODIFIED to position BELOW) --- */
+    .tooltip-trigger {
+        position: relative;
+        cursor: pointer;
+        display: block; 
+    }
+    .event-details.tooltip-trigger {
+        height: 100%;
+        padding: 4px 0; 
+    }
+    .event-tooltip {
+        position: absolute;
+        /* MODIFIED: Position BELOW the element to prevent clipping */
+        top: calc(100% + 8px); 
+        left: 50%; 
+        transform: translateX(-50%); /* Center horizontally */
+        z-index: 10;
+        min-width: 180px; 
+        max-width: 300px; 
+        padding: 8px 10px; 
+        /* Appearance */
+        background: rgba(0, 0, 0, 0.9); 
+        border: 1px solid #444; 
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        color: #e0e0e0;
+        font-size: 12px;
+        /* Visibility */
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, transform 0.2s;
+        pointer-events: none; 
+        white-space: normal;
+        text-align: left;
+    }
+    /* Tooltip Pointer (Caret/Corner) - MODIFIED to point UP */
+    .event-tooltip::after {
+        content: '';
+        position: absolute;
+        bottom: 100%; /* Position right at the TOP edge of the tooltip box */
+        left: 50%;
+        margin-left: -5px; 
+        border-width: 5px;
+        border-style: solid;
+        /* Arrow pointing UP, matching background */
+        border-color: transparent transparent rgba(0, 0, 0, 0.9) transparent; 
+        z-index: 11;
+    }
+    /* Hover state with slight animation - MODIFIED for downward shift */
+    .tooltip-trigger:hover .event-tooltip {
+        opacity: 1;
+        visibility: visible;
+        /* Slight downward shift on hover for effect */
+        transform: translate(-50%, 2px); 
+    }
+    /* Tooltip content spacing adjustment */
+    .tooltip-item {
+        margin-top: 6px; 
+        line-height: 1.4;
+    }
+    .tooltip-item:first-child {
+        margin-top: 0;
+    }
+
+
     @media (max-width: 768px) {
         .tables-grid {
             grid-template-columns: 1fr;
@@ -178,6 +256,10 @@
         th, td {
             padding: 10px 15px;
             font-size: 13px;
+        }
+        .event-icon {
+            width: 25px;
+            height: 25px;
         }
     }
     /* *** DARK MODE STYLES: END ***
@@ -240,7 +322,43 @@
         </div>
     </div>
     <script>
-        // Event categories and their mappings
+        // --- NEW: Event Icon Mapping ---
+        const ICON_BASE_URL = 'https://wiki.archerage.to/static/images/schedules/event/';
+        
+        // Maps event name to its specific file name
+        const EVENT_ICONS = {
+            // Rifts
+            'Crimson Rift (Ynystere)': ICON_BASE_URL + 'crimson_rift.png',
+            'Crimson Rift (Sungold)': ICON_BASE_URL + 'crimson_rift.png',
+            'Grimghast Rift': ICON_BASE_URL + 'grimghast_rift.png',
+            'Luscas Awakening': ICON_BASE_URL + 'lusca_awakening.png', // UPDATED
+            'Akasch Invasion': ICON_BASE_URL + 'boss_monster.png', // UPDATED
+            // World Bosses
+            'Kraken': ICON_BASE_URL + 'kraken.png',
+            'Jola, Meina & Glenn': ICON_BASE_URL + 'boss_monster.png', // UPDATED
+            // Instances
+            'Golden Plains Battle': ICON_BASE_URL + 'goldplain.png', // UPDATED
+            'Mistmerrow': ICON_BASE_URL + 'event.png', // UPDATED
+            'Skyfin Base Capture': ICON_BASE_URL + 'event.png', // UPDATED
+            'Red Dragon\'s Keep': ICON_BASE_URL + 'dragon_red.png', // UPDATED
+            'Kadum': ICON_BASE_URL + 'kadum.png',
+            // Arenas (All UPDATED to event.png)
+            'Drill Camp Arena': ICON_BASE_URL + 'event.png', 
+            'Free-For-All': ICON_BASE_URL + 'event.png', 
+            'Sparring Arena': ICON_BASE_URL + 'event.png',
+            'Gladiator Arena': ICON_BASE_URL + 'event.png',
+            'Flag War': ICON_BASE_URL + 'event.png',
+            // PvP Events
+            'Abyssal Attack': ICON_BASE_URL + 'abyssal_attack.png',
+            'Siege': ICON_BASE_URL + 'event.png', // UPDATED
+            // Other Events
+            'Festival': ICON_BASE_URL + 'pioneer.png', // UPDATED
+            'Daily Reset': ICON_BASE_URL + 'daily_reset.png',
+            'Weekly Reset': ICON_BASE_URL + 'archepass_reset.png', // UPDATED
+        };
+        // --- END: Event Icon Mapping ---
+
+        // Event categories and their mappings (unchanged)
         const eventCategories = {
             rifts: {
                 // Crimson Rift (Ynystere): 4-hour RT cycle starting MSK 12:20 (2:20 PM PDT)
@@ -371,18 +489,18 @@
                         'sunday': ['14:00-15:00', '20:00-21:00']
                     }
                 },
-                // FIX: Updated Sparring Arena to the final, specified Server Time (UTC+3) schedule.
                 'Sparring Arena': {
                     schedule: {
-                        'monday': ['00:00-01:00', '09:00-23:59'], 
-                        'tuesday': ['00:00-01:00', '09:00-23:59'],
-                        'wednesday': ['00:00-01:00', '09:00-23:59'],
-                        'thursday': ['00:00-01:00', '09:00-23:59'],
-                        'friday': ['00:00-01:00', '09:00-23:59'],
-                        'saturday': ['00:00-01:00', '09:00-23:59'],
-                        'sunday': ['00:00-01:00', '09:00-23:59']
+                        'monday': ['00:00-01:00', '09:00-00:00'],
+                        'tuesday': ['00:00-01:00', '09:00-00:00'],
+                        'wednesday': ['00:00-01:00', '09:00-00:00'],
+                        'thursday': ['00:00-01:00', '09:00-00:00'],
+                        'friday': ['00:00-01:00', '09:00-00:00'],
+                        'saturday': ['00:00-01:00', '09:00-00:00'],
+                        'sunday': ['00:00-01:00', '09:00-00:00']
                     }
                 },
+                // GLADIATOR ARENA FIXED: Second period now runs until 23:59 server time
                 'Gladiator Arena': {
                     schedule: {
                         'monday': ['00:00-03:30', '07:00-23:59'], 
@@ -454,7 +572,7 @@
             }
         };
 
-        // --- Time Configuration and Logic ---
+        // --- Time Configuration and Logic (unchanged) ---
 
         const SERVER_TIME_OFFSET_HOURS = 3; 
 
@@ -535,7 +653,7 @@
             return { hours: gameHours, minutes: gameMinutes };
         }
 
-        // --- Utility Functions (Time Formatting/Conversion) ---
+        // --- Utility Functions (Time Formatting/Conversion - unchanged) ---
 
         // Converts Server Time (ST) input to a Date object in the local timezone.
         function convertServerTimeToLocal(stTime, dayOffset = 0) {
@@ -586,7 +704,7 @@
             return `${dayName}, ${month} ${day}, ${formatTime12Hour(date)}`;
         }
 
-        // Formats a millisecond difference into HH:MM:SS
+        // MODIFIED: Formats a millisecond difference into HH:MM:SS or MM:SS if hours is 0
         function formatTimeDifference(ms) {
             if (ms < 0) ms = 0;
             const totalSeconds = Math.floor(ms / 1000);
@@ -595,10 +713,95 @@
             const seconds = totalSeconds % 60;
 
             const pad = (num) => num.toString().padStart(2, '0');
-            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+            
+            if (hours > 0) {
+                return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+            } else {
+                return `${pad(minutes)}:${pad(seconds)}`;
+            }
+        }
+        
+        // --- Tooltip Logic (RE-ADDED to user's file) ---
+
+        function getNextOccurrences(eventName, eventData) {
+            const schedule = eventData.schedule;
+            // Only generate tooltip details for schedule-based events
+            if (!schedule) return []; 
+
+            const now = new Date();
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            let occurrences = [];
+            const MAX_DAYS_CHECK = 8; // Check up to 8 days out
+            const MAX_OCCURRENCES = 3; // Look for 3 to ensure we capture the next 2 true future ones
+            
+            // Get the current day of the week *in Server Time*
+            const offsetMs = SERVER_TIME_OFFSET_HOURS * 3600000;
+            const serverTimeDate = new Date(now.getTime() + now.getTimezoneOffset() * 60000 + offsetMs);
+            
+            // Check up to 8 days out
+            for (let dayOffset = 0; dayOffset < MAX_DAYS_CHECK; dayOffset++) { 
+                if (occurrences.length >= MAX_OCCURRENCES) break;
+                
+                // Calculate the server day for this dayOffset
+                const checkDate = new Date(serverTimeDate);
+                checkDate.setDate(checkDate.getDate() + dayOffset);
+                const checkDayName = dayNames[checkDate.getDay()];
+
+                if (!schedule[checkDayName]) continue;
+
+                for (const timeRange of schedule[checkDayName]) {
+                    if (occurrences.length >= MAX_OCCURRENCES) break;
+
+                    const [startTime, endTime] = timeRange.split('-');
+                    
+                    // Calculate start and end date objects
+                    const startConverted = convertServerTimeToLocal(startTime, dayOffset);
+                    let startDate = startConverted.date;
+                    
+                    let endDate;
+                    // --- Custom End Date Logic (same as in getEventStatus) ---
+                    if (endTime === '00:00' || endTime === '24:00') {
+                        // For events that end exactly at midnight, use 00:01 of the next day as the end point for the timer
+                        const endConverted = convertServerTimeToLocal('00:01', dayOffset);
+                        endDate = endConverted.date;
+                        if (endDate.getTime() <= startDate.getTime()) {
+                             endDate.setDate(endDate.getDate() + 1);
+                        }
+                    } else if (endTime === '23:59') {
+                        const endConverted = convertServerTimeToLocal(endTime, dayOffset);
+                        endDate = endConverted.date;
+                    } else {
+                        const endConverted = convertServerTimeToLocal(endTime, dayOffset);
+                        endDate = endConverted.date;
+                        if (endDate.getTime() < startDate.getTime()) {
+                             endDate.setDate(endDate.getDate() + 1);
+                        }
+                    }
+                    // --- End Custom Logic ---
+
+                    // Check if event has not ended yet
+                    // Only include the current active event or events strictly in the future
+                    if (endDate.getTime() > now.getTime()) { 
+                         occurrences.push({ 
+                             start: startDate, 
+                             end: endDate,
+                             timeRange: `${startTime} - ${endTime} ST` // Show server time for clarity
+                         });
+                    }
+                }
+            }
+
+            // Sort by start time
+            occurrences.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+            // Return the next 2 (could be 1 active + 1 upcoming, or 2 upcoming)
+            // Use a Set to ensure unique start/end pairs, then slice
+            const uniqueOccurrences = Array.from(new Map(occurrences.map(o => [`${o.start.getTime()}-${o.end.getTime()}`, o])).values());
+
+            return uniqueOccurrences.slice(0, 2); 
         }
 
-        // --- Event Status Logic ---
+        // --- Event Status Logic (MODIFIED for new countdown format) ---
 
         function getGameTimeEventStatus(eventName, gameTimeSchedule) {
             const currentGameTime = getCurrentGameTime();
@@ -635,9 +838,8 @@
                     // Countdown to END
                     const gameMinutesLeft = endToday - currentGameMinutes;
                     const realSecondsLeft = gameMinutesLeft * (60 / gameSpeedMultiplier);
-                    const realMinutesLeft = Math.floor(realSecondsLeft / 60);
-                    const realSecondsLeftRemainder = Math.floor(realSecondsLeft % 60);
-                    countdown = `${realMinutesLeft}m ${realSecondsLeftRemainder}s`;
+                    const realMsLeft = realSecondsLeft * 1000;
+                    countdown = formatTimeDifference(realMsLeft); // MODIFIED
                 }
 
                 // 2. Calculate Upcoming Time
@@ -663,9 +865,8 @@
                     // Only set upcoming countdown if not already active
                     if (realSecondsUntilNext <= 3600) { // 1 hour threshold for 'upcoming'
                         status = 'upcoming';
-                        const realMinutesUntil = Math.floor(realSecondsUntilNext / 60);
-                        const realSecondsUntilRemainder = Math.floor(realSecondsUntilNext % 60);
-                        countdown = `${realMinutesUntil}m ${realSecondsUntilRemainder}s`;
+                        const realMsUntil = realSecondsUntilNext * 1000;
+                        countdown = formatTimeDifference(realMsUntil); // MODIFIED
                     } else {
                         status = 'inactive';
                         countdown = null;
@@ -725,13 +926,11 @@
 
             if (now >= lastEventStart && now < eventEnd) {
                 const timeLeft = eventEnd.getTime() - now.getTime();
-                const minutesLeft = Math.floor(timeLeft / 60000);
-                const secondsLeft = Math.floor((timeLeft % 60000) / 1000);
                 
                 // Active events now show NEXT START TIME
                 return { 
                     status: 'active', 
-                    countdown: `${minutesLeft}m ${secondsLeft}s`, // Simplified text for badge use
+                    countdown: formatTimeDifference(timeLeft), // MODIFIED
                     nextTime: nextTimeDetail,
                     nextStartTime: nextEventStart,
                     endTime: eventEnd
@@ -739,11 +938,9 @@
             }
 
             if (timeUntilNext <= 3600000) {
-                const minutesUntil = Math.floor(timeUntilNext / 60000);
-                const secondsUntil = Math.floor((timeUntilNext % 60000) / 1000);
                 return { 
                     status: 'upcoming', 
-                    countdown: `${minutesUntil}m ${secondsUntil}s`, 
+                    countdown: formatTimeDifference(timeUntilNext), // MODIFIED
                     nextTime: nextTimeDetail,
                     nextStartTime: nextEventStart,
                     endTime: null
@@ -821,32 +1018,29 @@
 
                     // Handle end time (including midnight cross)
                     if (endTime === '00:00' || endTime === '24:00') {
-                        // FIX: An event ending at 00:00/24:00 Server Time ends at midnight of the NEXT server day.
-                        // 1. Get the local time equivalent of 00:00 Server Time
-                        const midnightConverted = convertServerTimeToLocal('00:00', 0);
-                        
-                        // 2. Start the endDate from the current startDate (which has the correct day)
-                        endDate = new Date(startDate);
-                        
-                        // 3. Set the time to the local time equivalent of 00:00 MSK.
-                        endDate.setHours(midnightConverted.date.getHours(), midnightConverted.date.getMinutes(), 0, 0);
-
-                        // 4. Advance the date by one day to mark the end of the event period.
-                        endDate.setDate(startDate.getDate() + 1);
-
+                        // For events that end exactly at midnight, use 00:01 of the next day as the end point for the timer
+                        const endConverted = convertServerTimeToLocal('00:01', 0);
+                        endDate = endConverted.date;
+                        if (endDate.getTime() <= startDate.getTime()) {
+                             endDate.setDate(endDate.getDate() + 1);
+                        }
                     } else if (endTime === '23:59') {
-                        // Event ends at the last minute of the CURRENT server day (dayOffset 0).
+                        // Special case for ending at the last minute of the day
                         const endConverted = convertServerTimeToLocal(endTime, 0);
                         endDate = endConverted.date;
+                        // Handle standard cross-midnight events (e.g., 23:00-01:00)
+                        if (endDate.getTime() < startDate.getTime()) {
+                             endDate.setDate(endDate.getDate() + 1);
+                        }
                     } else {
-                        // Logic for time ranges that cross local midnight (e.g., 23:00-01:00 or 09:00-01:00)
                         const endConverted = convertServerTimeToLocal(endTime, 0);
                         endDate = endConverted.date;
-                        // If the end time is numerically less than the start time, it means it rolls over to the next day
+                        // Handle standard cross-midnight events (e.g., 23:00-01:00)
                         if (endDate.getTime() < startDate.getTime()) {
                              endDate.setDate(endDate.getDate() + 1);
                         }
                     }
+
 
                     // Check if Active
                     if (now >= startDate && now < endDate) {
@@ -871,19 +1065,10 @@
             if (activeEvent) {
                 const timeLeft = activeEvent.endTime.getTime() - now.getTime();
                 
-                let countdownText;
-                // Use HH:MM:SS for Arenas OR any event with more than 1 hour left
-                if (categoryId === 'arenas' || timeLeft >= 3600000) { 
-                    countdownText = formatTimeDifference(timeLeft);
-                } else {
-                    const minutesLeft = Math.floor(timeLeft / 60000);
-                    const secondsLeft = Math.floor((timeLeft % 60000) / 1000);
-                    countdownText = `${minutesLeft}m ${secondsLeft}s`;
-                }
-                
+                // Simplified countdown logic to rely solely on the modified formatTimeDifference
                 return { 
                     status: 'active', 
-                    countdown: countdownText, 
+                    countdown: formatTimeDifference(timeLeft), 
                     nextTime: nextTimeDetail,
                     nextStartTime: nextOccurrenceDate, 
                     endTime: activeEvent.endTime
@@ -893,19 +1078,10 @@
             if (upcomingEvent) {
                 const timeUntil = upcomingEvent.startTime.getTime() - now.getTime();
                 
-                let countdownText;
-                 // Use HH:MM:SS for Arenas OR any event with more than 1 hour left
-                 if (categoryId === 'arenas' || timeUntil >= 3600000) {
-                    countdownText = formatTimeDifference(timeUntil);
-                } else {
-                    const minutesUntil = Math.floor(timeUntil / 60000);
-                    const secondsUntil = Math.floor((timeUntil % 60000) / 1000);
-                    countdownText = `${minutesUntil}m ${secondsUntil}s`;
-                }
-                
+                // Simplified countdown logic to rely solely on the modified formatTimeDifference
                 return { 
                     status: 'upcoming', 
-                    countdown: countdownText, 
+                    countdown: formatTimeDifference(timeUntil), 
                     nextTime: nextTimeDetail,
                     nextStartTime: nextOccurrenceDate,
                     endTime: null
@@ -925,10 +1101,11 @@
             return { status: 'inactive', nextTime: 'No schedule', countdown: null, nextStartTime: null, endTime: null };
         }
         
-        // --- Table Rendering ---
+        // --- Table Rendering (MODIFIED for icons and tooltip) ---
 
         function updateEventTables() {
             updateAllTimes(); 
+            const now = new Date(); 
 
             for (const [categoryId, events] of Object.entries(eventCategories)) {
                 const tableBody = document.getElementById(`${categoryId}-table`);
@@ -974,13 +1151,53 @@
                     return a.sortTime - b.sortTime;
                 });
 
-                for (const { eventName, status } of eventDetails) {
+                for (const { eventName, eventData, status } of eventDetails) {
                     const row = document.createElement('tr');
                     row.className = `event-row ${status.status}`;
                     
                     const nextTimeFormatted = status.nextTime || '';
                     
-                    // Build the countdown cell content
+                    // --- Tooltip Logic (RE-ADDED) ---
+                    // Note: This must be called inside the loop as it relies on eventData
+                    const nextTwo = getNextOccurrences(eventName, eventData);
+                    let tooltipHTML = '';
+                    
+                    if (nextTwo.length > 0) {
+                        const tooltipItems = nextTwo.map(occ => {
+                            const isCurrent = occ.start.getTime() <= now.getTime() && occ.end.getTime() > now.getTime();
+                            
+                            // Get local date/time parts
+                            const localDayTime = formatDateWithDay(occ.start); 
+                            const localTimeOnly = localDayTime.split(', ')[2]; 
+                            const localDay = localDayTime.split(', ').slice(0, 2).join(', '); 
+                            
+                            // Primary text: Server Time range (bold) or Active status
+                            const primaryText = isCurrent ? 
+                                `<span style="color:#66bb6a; font-weight:700;">Active until ${formatTime12Hour(occ.end)}</span>` :
+                                `<span style="font-weight:700;">${occ.timeRange}</span>`;
+                                
+                            // Secondary text: Local time details
+                            const secondaryText = isCurrent ? 
+                                 `<span style="font-size:11px; color: #bbb;">(Ends ${localDay}, ${formatTime12Hour(occ.end)})</span>` :
+                                 `<span style="font-size:11px; color: #bbb;">(${localDay}, starts ${localTimeOnly})</span>`;
+
+                            return `
+                                <div class="tooltip-item">
+                                    <div>${primaryText}</div>
+                                    <div>${secondaryText}</div>
+                                </div>
+                            `;
+                        }).join('');
+
+                        tooltipHTML = `
+                            <div class="event-tooltip">
+                                ${tooltipItems}
+                            </div>
+                        `;
+                    }
+                    // --- Tooltip Logic END ---
+                    
+                    // Build the countdown cell content (unchanged)
                     let countdownContent = status.countdown || '';
                     if (status.status === 'upcoming') {
                          // Wrap the countdown and add the 'Upcoming' badge
@@ -1007,11 +1224,17 @@
                         `;
                     }
 
+                    // --- ADD ICON HTML ---
+                    const iconURL = EVENT_ICONS[eventName];
+                    const iconHTML = iconURL ? `<img src="${iconURL}" alt="${eventName} Icon" class="event-icon">` : '';
+
                     row.innerHTML = `
                         <td class="event-name"> 
-                            <div class="event-details"> 
+                            ${iconHTML}
+                            <div class="event-details tooltip-trigger"> 
                                 <div class="event-title">${eventName}</div> 
                                 <div class="next-time">${nextTimeFormatted}</div>
+                                ${tooltipHTML}
                             </div> 
                         </td> 
                         <td> 
