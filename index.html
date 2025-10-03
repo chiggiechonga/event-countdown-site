@@ -169,6 +169,12 @@
         padding: 5px 20px 5px 20px; 
         font-size: 13px;
         border-bottom: 1px solid #222;
+
+        /* --- MODIFIED: Use flex to align content for date/countdown --- */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        /* --- END MODIFIED --- */
     }
     /* Ensure the first list item has no top padding if the header is removed, and the last item has no border */
     .dropdown-list div:first-child {
@@ -176,6 +182,13 @@
     }
     .dropdown-list div:last-child {
         border-bottom: none;
+    }
+    
+    /* --- NEW: Countdown text styling for the dropdown menu --- */
+    .dropdown-countdown {
+        color: #fff; /* White color as requested */
+        font-weight: 500;
+        font-size: 14px; /* Slightly larger for emphasis */
     }
     /* END: Styles for Clickable Row and Dropdown */
 
@@ -490,7 +503,7 @@
                     gameTimeSchedule: { 
                         startTime: '06:00', 
                         endTime: '09:00',
-                        durationMinutes: 0.5 * 60, // MODIFIED: 3 game hours (30 minutes)
+                        durationMinutes: 3 * 60, // MODIFIED: 3 game hours (180 minutes)
                         intervalMinutes: 24 * 60 
                     } 
                 }
@@ -819,7 +832,60 @@
             return countdownString;
         }
 
-        // --- Dropdown/Next Occurrence Logic ---
+        // --- NEW HELPER FUNCTIONS FOR DROPDOWN FORMATTING ---
+
+        /**
+         * Formats a millisecond difference into DD:HH:MM format.
+         * @param {number} ms - Milliseconds remaining.
+         * @returns {string} Formatted countdown string (DD:HH:MM).
+         */
+        function formatDropdownCountdown(ms) {
+            if (ms < 0) ms = 0;
+
+            // Calculate total minutes remaining
+            const totalMinutes = Math.floor(ms / (1000 * 60));
+
+            const days = Math.floor(totalMinutes / (24 * 60));
+            const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+            const minutes = totalMinutes % 60;
+
+            const pad = (num) => num.toString().padStart(2, '0');
+
+            // Returns DD:HH:MM
+            return `${pad(days)}:${pad(hours)}:${pad(minutes)}`;
+        }
+
+        /**
+         * Formats a Date object into 'Day, Mon DD hh:mm AM/PM' format.
+         * @param {Date} date - The date object.
+         * @returns {string} Formatted date string (Day, Mon DD hh:mm AM/PM).
+         */
+        function formatDateDropdown(date) {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            const dayName = days[date.getDay()];
+            const month = months[date.getMonth()];
+            const day = date.getDate();
+            const time12Hour = formatTime12Hour(date);
+
+            // Returns Day, Month Day#, Time (e.g., Fri, Oct 3 8:30 PM)
+            return `${dayName}, ${month} ${day} ${time12Hour}`;
+        }
+        
+        /**
+         * Formats a Date object into 'hh:mm' (24-hour) format.
+         * @param {Date} date - The date object.
+         * @returns {string} Formatted time string (hh:mm).
+         */
+        function formatTime24Hour(date) {
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        }
+
+        // --- End of NEW HELPER FUNCTIONS ---
+
 
         /**
          * Calculates the next N occurrences for a scheduled event.
@@ -827,7 +893,7 @@
          * @param {number} count - The number of future occurrences to find.
          * @returns {Array<Date>} An array of Date objects for the next N start times.
          */
-        function calculateNextOccurrences(eventData, count = 4) { // Default count set to 4
+        function calculateNextOccurrences(eventData, count = 7) { // Default count set to 7 for better dropdown content
             const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
             const occurrences = [];
             const now = new Date();
@@ -898,7 +964,8 @@
 
             // --- Logic for Fixed Server Time Events (Most common) ---
             if (eventData.schedule) {
-                // *** FIX: Loop up to 30 days out (4 weeks) to ensure we find 'count' (7) weekly events ***
+                // FIX: Loop up to 30 days out (4 weeks) to ensure we find 'count' (7) weekly events
+                const allEventOccurrences = [];
                 for (let i = 0; i < 30; i++) { 
                     const searchDate = new Date(now);
                     searchDate.setDate(now.getDate() + i);
@@ -916,42 +983,38 @@
                         const startLocal = convertServerTimeToLocal(startTimeStr, i);
                         const endLocal = convertServerTimeToLocal(endTimeStr, i);
 
-                        // If the end time is '24:00' or '00:00' the next day, we need to adjust the date for 'endLocal'
-                        if (endTimeStr === '00:00' || endTimeStr === '24:00') {
-                             // If a schedule runs until 24:00 (which is 00:00 the next day), 
-                             // we must ensure the endLocal date is correctly incremented by one day relative to the start date.
-                            let actualEndDate = new Date(startLocal.date);
-                            actualEndDate.setDate(actualEndDate.getDate() + (endTimeStr === '24:00' ? 1 : 0));
-                            // If the end time is numerically less than the start time (e.g., 22:00-02:00), 
-                            // it means it spans midnight. In our simplified setup, 
-                            // schedules are typically self-contained or explicitly 23:59/00:00.
-                            if (endLocal.date.getTime() < startLocal.date.getTime() && endLocal.date.getDay() === startLocal.date.getDay()) {
-                                endLocal.date.setDate(endLocal.date.getDate() + 1);
-                            }
+                        // Adjust the end date for midnight wrapping:
+                        // If end time is before start time (e.g. 22:00-02:00) or it's 24:00, it's next day.
+                        if (endTimeStr === '24:00' || (startLocal.date.getTime() > endLocal.date.getTime() && endLocal.date.getDay() === startLocal.date.getDay())) {
+                            endLocal.date.setDate(endLocal.date.getDate() + 1);
                         }
                         
                         // Check if the event's start time is in the future relative to 'now'
-                        if (startLocal.date.getTime() > now.getTime() || 
-                            (startLocal.date.getTime() <= now.getTime() && endLocal.date.getTime() > now.getTime())) {
+                        // OR if the event is currently active
+                        if (startLocal.date.getTime() >= now.getTime() || 
+                            (startLocal.date.getTime() < now.getTime() && endLocal.date.getTime() > now.getTime())) {
                             
                             // If it's upcoming or currently active, it's a valid occurrence
-                            occurrences.push({ 
+                            allEventOccurrences.push({ 
                                 startTime: startLocal.date, 
                                 endTime: endLocal.date 
                             });
-
-                            if (occurrences.length >= count) {
-                                // Sort by time (just to be safe, though they should be pushed in order)
-                                occurrences.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-                                // Return only the start times as dates
-                                return occurrences.map(o => o.startTime).slice(0, count);
-                            }
                         }
                     }
                 }
+
+                // Sort and return only the next 'count' start times
+                allEventOccurrences.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+                
+                // We must ensure the first item is the *actual* next event (which may be one currently running)
+                // Filter out any instances that have already ended
+                const futureOccurrences = allEventOccurrences.filter(o => o.endTime.getTime() > now.getTime());
+
+                // Return only the start times of the next 'count' future events
+                return futureOccurrences.map(o => o.startTime).slice(0, count);
             }
 
-            // Convert the found start/end time objects back to just Date objects for consistent return type
+            // If we only have occurrences objects (from the complex logic above), return just the start times
             return occurrences.map(o => o.startTime);
         }
 
@@ -973,68 +1036,63 @@
             if (eventData.schedule) {
                 // For ST scheduled events, we need to find the specific schedule slot to get the duration.
                 const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                const dayIndex = nextStartTime.getDay();
-                const dayName = dayNames[dayIndex];
-
-                const schedulesForDay = eventData.schedule[dayName];
                 
-                if (schedulesForDay) {
-                    for (const schedule of schedulesForDay) {
-                        const [startTimeStr, endTimeStr] = schedule.split('-');
-                        
-                        // Convert the Server Time string for this slot to a local date object
-                        const startLocal = convertServerTimeToLocal(startTimeStr, 0); // Day offset 0 because we're checking the day that nextStartTime falls on.
+                // Search for the slot up to 7 days out, based on nextStartTime
+                for (let i = 0; i < 7; i++) {
+                    const searchDate = new Date(nextStartTime);
+                    searchDate.setDate(nextStartTime.getDate() + i); // Search date will be the day of the nextStartTime, then the next day, etc.
 
-                        // The 'nextStartTime' Date object already contains the local time equivalent of the Server Time,
-                        // but it might be set to the next day if we searched ahead. We need to check if its
-                        // hours/minutes match the start time string, accounting for the possibility that the schedule 
-                        // was found 7 days in the future.
-                        const nextEventTime = `${nextStartTime.getHours().toString().padStart(2, '0')}:${nextStartTime.getMinutes().toString().padStart(2, '0')}`;
-                        
-                        if (startLocal.time === nextEventTime) {
-                            const endLocal = convertServerTimeToLocal(endTimeStr, 0); 
+                    const dayIndex = searchDate.getDay();
+                    const dayName = dayNames[dayIndex];
 
-                            // Handle midnight wrapping (00:00 or 24:00)
-                            let endTimeDate = endLocal.date;
-                            if (endTimeStr === '00:00' || endTimeStr === '24:00') {
-                                 // If the end time is numerically less than the start time (e.g., 22:00-02:00), 
-                                 // or if it's 24:00, it wraps to the next day.
-                                if (endLocal.date.getTime() < startLocal.date.getTime() || endTimeStr === '24:00') {
-                                    endTimeDate.setDate(endTimeDate.getDate() + 1);
+                    const schedulesForDay = eventData.schedule[dayName];
+
+                    if (schedulesForDay) {
+                        for (const schedule of schedulesForDay) {
+                            const [startTimeStr, endTimeStr] = schedule.split('-');
+                            
+                            // This is the local time string of the *expected* start time
+                            const startLocalCheck = convertServerTimeToLocal(startTimeStr);
+
+                            // The 'nextStartTime' Date object already contains the correct local time and date
+                            const nextEventTime = `${nextStartTime.getHours().toString().padStart(2, '0')}:${nextStartTime.getMinutes().toString().padStart(2, '0')}`;
+                            
+                            // Check if the nextStartTime matches this schedule slot's time
+                            if (startLocalCheck.time === nextEventTime) {
+                                // Now we calculate the duration using server time strings
+                                let stStartMinutes = parseInt(startTimeStr.split(':')[0]) * 60 + parseInt(startTimeStr.split(':')[1]);
+                                let stEndMinutes = parseInt(endTimeStr.split(':')[0]) * 60 + parseInt(endTimeStr.split(':')[1]);
+                                
+                                // If end time is earlier than start time (or 24:00), it means it wraps the day
+                                if (stEndMinutes <= stStartMinutes && endTimeStr !== '00:00') {
+                                    stEndMinutes += 24 * 60;
                                 }
-                            }
-                            
-                            // Adjust the end date to match the nextStartTime date for accurate comparison
-                            // Ensure the end date is on the correct day relative to the start time (which is nextStartTime)
-                            // We MUST use the original server time logic for correct midnight wrapping duration calculation
-                            let stStartMinutes = parseInt(startTimeStr.split(':')[0]) * 60 + parseInt(startTimeStr.split(':')[1]);
-                            let stEndMinutes = parseInt(endTimeStr.split(':')[0]) * 60 + parseInt(endTimeStr.split(':')[1]);
-                            
-                            // If end time is earlier than start time (or 24:00), it means it wraps the day
-                            if (stEndMinutes <= stStartMinutes && endTimeStr !== '00:00') {
-                                stEndMinutes += 24 * 60;
-                            }
-                            durationMinutes = stEndMinutes - stStartMinutes;
-                            durationFound = true;
-                            
-                            // The true end time (local) is simply start time + duration
-                            const actualEndTime = new Date(nextStartTime.getTime() + durationMinutes * 60000);
-                            const timeUntilEnd = actualEndTime.getTime() - now.getTime();
+                                durationMinutes = stEndMinutes - stStartMinutes;
+                                durationFound = true;
+                                
+                                // The true end time (local) is simply start time + duration
+                                const actualEndTime = new Date(nextStartTime.getTime() + durationMinutes * 60000);
+                                const timeUntilEnd = actualEndTime.getTime() - now.getTime();
 
-                            if (timeUntilStart <= 0 && timeUntilEnd > 0) {
-                                // Event is active
-                                return { 
-                                    status: 'active', 
-                                    countdownMs: timeUntilEnd, 
-                                    endTime: actualEndTime 
-                                };
-                            } else if (timeUntilStart > 0) {
-                                // Event is upcoming
-                                return { 
-                                    status: 'upcoming', 
-                                    countdownMs: timeUntilStart, 
-                                    endTime: actualEndTime 
-                                };
+                                if (timeUntilStart <= 0 && timeUntilEnd > 0) {
+                                    // Event is active
+                                    return { 
+                                        status: 'active', 
+                                        countdownMs: timeUntilEnd, 
+                                        endTime: actualEndTime 
+                                    };
+                                } else if (timeUntilStart > 0) {
+                                    // Event is upcoming
+                                    return { 
+                                        status: 'upcoming', 
+                                        countdownMs: timeUntilStart, 
+                                        endTime: actualEndTime 
+                                    };
+                                }
+                                
+                                // Since we found a match for nextStartTime, break out of the schedule and day loops
+                                i = 7; // Break outer loop
+                                break; 
                             }
                         }
                     }
@@ -1046,8 +1104,8 @@
                 durationMinutes = eventData.gameTimeSchedule.durationMinutes;
             }
 
-            // Only proceed if duration was not calculated using the ST logic above
-            if (!durationFound) {
+            // Only proceed if duration was not calculated using the ST logic above or if it's a cyclical event
+            if (!durationFound || eventData.realTimeSchedule || eventData.gameTimeSchedule) {
                 const durationMs = durationMinutes * 60000;
                 const actualEndTime = new Date(nextStartTime.getTime() + durationMs);
                 const timeUntilEnd = actualEndTime.getTime() - now.getTime();
@@ -1102,15 +1160,19 @@
                     // b. Determine the effective next event (handling recently ended events)
                     let nextStartTime = allNextOccurrences[0];
                     let status = getEventStatus(nextStartTime, eventName, categoryId);
-
-                    // Re-check status if it's inactive (meaning the first occurrence is already finished)
-                    if (status.status === 'inactive') {
-                        const potentialNext = calculateNextOccurrences(eventData, 2);
-                        if (potentialNext.length > 1) {
-                            nextStartTime = potentialNext[1];
-                            status = getEventStatus(nextStartTime, eventName, categoryId);
-                        }
+                    
+                    // If the first one is past, check the second one (this mainly handles events with long duration like 00:00-04:00 ST)
+                    if (status.status === 'inactive' && allNextOccurrences.length > 1) {
+                         // Fallback logic to check if the next-next one is active or upcoming
+                        nextStartTime = allNextOccurrences[1];
+                        status = getEventStatus(nextStartTime, eventName, categoryId);
                     }
+                    // Final safety check: if still inactive, use the first event as the basis for the far-off schedule display
+                    if(status.status === 'inactive') {
+                        nextStartTime = allNextOccurrences[0];
+                        status = getEventStatus(nextStartTime, eventName, categoryId);
+                    }
+
 
                     // c. Store the full event data for rendering and sorting
                     categorizedEvents[categoryId].push({
@@ -1232,18 +1294,34 @@
                     const dropdownList = document.createElement('div');
                     dropdownList.className = 'dropdown-list';
                     
-                    // 2. Add Next Occurrences (starting from the second one, since the first is in the main row)
-                    for (let i = 1; i < allNextOccurrences.length; i++) {
-                        const nextEvent = allNextOccurrences[i];
-                        const eventStatus = getEventStatus(nextEvent, eventName, categoryId);
-                        
-                        // Only show future instances (this handles the case where the primary instance is active, but we only want future ones in the dropdown)
-                        if(nextEvent.getTime() > new Date().getTime()) {
-                            const timeDisplay = eventStatus.endTime 
-                                ? `${formatDateWithDay(nextEvent)} - ${formatTime12Hour(eventStatus.endTime)}` 
-                                : `${formatDateWithDay(nextEvent)} (Duration N/A)`;
+                    // Find the index of the event currently shown in the main row
+                    const firstOccurrenceIndex = allNextOccurrences.findIndex(o => o.getTime() === finalNextStartTime.getTime());
+                    
+                    // Start iteration from the occurrence *after* the one shown in the main row
+                    const startIndex = firstOccurrenceIndex >= 0 ? firstOccurrenceIndex + 1 : 1; 
 
-                            dropdownList.innerHTML += `<div>${timeDisplay}</div>`;
+                    for (let i = startIndex; i < allNextOccurrences.length; i++) {
+                        const nextEvent = allNextOccurrences[i];
+                        
+                        // Only show future instances
+                        if(nextEvent.getTime() > new Date().getTime()) {
+                            
+                            // --- MODIFIED CODE FOR NEW DROPDOWN FORMAT ---
+                            const nowMs = new Date().getTime();
+                            const countdownMs = nextEvent.getTime() - nowMs;
+                            
+                            // Date (Fri, Oct 3 08:30 PM)
+                            const dateTime = formatDateDropdown(nextEvent);
+                            // Countdown in dd:hh:mm
+                            const countdown = formatDropdownCountdown(countdownMs);
+
+                            dropdownList.innerHTML += `
+                                <div>
+                                    <span>${dateTime}</span> 
+                                    <span class="dropdown-countdown">${countdown}</span>
+                                </div>
+                            `;
+                            // --- END MODIFIED CODE ---
                         }
                     }
 
