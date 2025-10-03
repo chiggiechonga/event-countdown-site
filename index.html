@@ -12,26 +12,52 @@
         font-family: Helvetica, Arial, sans-serif;
         margin: 0;
         padding: 20px;
-        /* Dark Background */
-        background: #1e1e1e; 
         min-height: 100vh;
-        /* Light Text for body (Slightly brighter) */
         color: #e0e0e0; 
+        
+        /* --- UPDATED BACKGROUND IMAGE STYLES --- */
+        /* 1. Set the new background image URL */
+        background-image: url('https://aa.cdn.gmru.net/ms/39fd61d35c175537444830cd8e3d31e5.jpg'); 
+        background-repeat: no-repeat;
+        background-attachment: fixed; 
+        /* 2. Make the image fill the background */
+        background-size: cover; 
+        background-position: center center;
+        
+        /* 3. Set the Opaque Layer: Black color with 25% opacity (alpha 0.25) */
+        background-color: rgba(0, 0, 0, 0.25); 
+        /* Blends the image and the dark color, making the image visible but slightly muted */
+        background-blend-mode: multiply; 
+        /* --- END UPDATED BACKGROUND IMAGE STYLES --- */
     }
     .container {
         max-width: 1400px;
         margin: 0 auto;
     }
+
+    /* --- NEW STYLES: INFO BOX --- */
+    .info-box {
+        /* Dark background with 70% opacity for contrast */
+        background: rgba(0, 0, 0, 0.7); 
+        padding: 20px;
+        margin-bottom: 25px; 
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        border: 1px solid #333;
+    }
+    /* --- END NEW STYLES --- */
+
     .header {
         text-align: center;
         margin-bottom: 30px;
     }
     .header h1 {
         margin: 0 0 10px 0;
+	font-face: Oswald;
         font-size: 1.8rem;
         font-weight: 300;
         /* Updated: Muted Teal Header Text Color */
-        color: #607D8B; 
+        color: #ffffff; 
     }
     .time-display {
         display: flex;
@@ -39,7 +65,7 @@
         align-items: center;
         /* Increased gap to accommodate two times */
         gap: 30px; 
-        margin-bottom: 30px;
+        margin-bottom: 0; /* Removed margin-bottom since it's now on the info-box */
         /* Ensure font size is consistent */
         font-size: 16px; 
         color: #b0b0b0;
@@ -205,15 +231,15 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Event Schedules</h1>
-        </div>
-        <div class="time-display">
-            <div class="server-time" id="serverTime"></div>
-            <div class="divider">|</div>
-            <div class="game-time" id="gameTime"></div>
-        </div>
-        <div class="tables-grid">
+        <div class="info-box"> <div class="header">
+                <h1>Event Schedules</h1>
+            </div>
+            <div class="time-display">
+                <div class="server-time" id="serverTime"></div>
+                <div class="divider">|</div>
+                <div class="game-time" id="gameTime"></div>
+            </div>
+        </div> <div class="tables-grid">
             <div class="event-table">
                 <div class="table-header">Rifts</div>
                 <table>
@@ -590,7 +616,7 @@
             return { hours: gameHours, minutes: gameMinutes };
         }
 
-        // --- Utility Functions (Time Formatting/Conversion - unchanged) ---
+        // --- Utility Functions (Time Formatting/Conversion) ---
 
         // Converts Server Time (ST) input to a Date object in the local timezone.
         function convertServerTimeToLocal(stTime, dayOffset = 0) {
@@ -641,11 +667,13 @@
             return `${dayName}, ${month} ${day}, ${formatTime12Hour(date)}`;
         }
 
-        // Formats a millisecond difference into HH:MM:SS, MM:SS, or Ss
-        // This function implements the requested logic:
-        // - Use HH:MM:SS format elements.
-        // - If hours=0, hide the hours part (e.g., use MM:SS).
-        // - If minutes=0 and hours=0, hide the minutes part (e.g., use Ss).
+        /**
+         * Formats a millisecond difference into the requested countdown format:
+         * - HH:MM:SS if hours > 0
+         * - MM:SS if hours = 0
+         * @param {number} ms - Milliseconds remaining.
+         * @returns {string} Formatted countdown string.
+         */
         function formatCountdown(ms) {
             if (ms < 0) ms = 0;
             const totalSeconds = Math.floor(ms / 1000);
@@ -653,6 +681,7 @@
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = totalSeconds % 60;
 
+            // Helper to ensure all parts are two digits
             const pad = (num) => num.toString().padStart(2, '0');
             
             // HH:MM:SS format
@@ -660,130 +689,127 @@
                 return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
             }
             
-            // MM:SS format (if minutes > 0)
-            if (minutes > 0) {
-                return `${pad(minutes)}:${pad(seconds)}`;
-            }
-            
-            // Seconds only format
-            return `${seconds}s`;
+            // MM:SS format (if hours = 0)
+            return `${pad(minutes)}:${pad(seconds)}`;
         }
         
-        // --- Event Status Logic (MODIFIED to use formatCountdown) ---
+        // --- Event Status Logic (MODIFIED for 30min duration and fix) ---
 
+        /**
+         * Calculates status for game-time triggered events (Jola, Meina & Glenn).
+         * Now correctly implements the 30-minute real-life duration.
+         */
         function getGameTimeEventStatus(eventName, gameTimeSchedule) {
-            const currentGameTime = getCurrentGameTime();
-            const currentGameMinutes = currentGameTime.hours * 60 + currentGameTime.minutes;
+            const now = new Date();
             
-            const startHours = parseInt(gameTimeSchedule.startTime.split(':')[0]);
-            const endHours = parseInt(gameTimeSchedule.endTime.split(':')[0]);
-            const startMinutes = startHours * 60 + parseInt(gameTimeSchedule.startTime.split(':')[1]);
-            const endMinutes = endHours * 60 + parseInt(gameTimeSchedule.endTime.split(':')[1]);
+            // Game Time sync point: 10:00 GT is syncHoursPDT (14:00 PDT)
+            const syncPointGameMinutes = gameTimeStartHours * 60; // 600 GT minutes (10:00 GT)
             
-            const intervalGameMinutes = 24 * 60; 
-            const realIntervalMs = 4 * 60 * 60 * 1000; // 4 real hours (24 GT hours)
-            const realDurationMs = 60 * 60 * 1000; // 60 real minutes (6 GT hours)
+            // Event GT Start: 06:00 GT (360 GT minutes)
+            const eventGTStartMinutes = parseInt(gameTimeSchedule.startTime.split(':')[0]) * 60; 
 
-            let status = 'inactive';
-            let countdown = null;
-            let nextStartRealTime = null;
-            let minTimeDiff = Infinity; // Game minutes until next start
-            let now = new Date();
-
-            // Iterate over two game cycles (today and tomorrow) to find the closest start time
-            for (let dayOffset = 0; dayOffset <= 1; dayOffset++) { 
-                let eventStart = startMinutes + dayOffset * intervalGameMinutes;
-                let eventEnd = endMinutes + dayOffset * intervalGameMinutes;
-
-                // Normalize times to the current day for comparison
-                const startToday = eventStart % intervalGameMinutes;
-                const endToday = eventEnd % intervalGameMinutes;
-
-                // 1. Check for Active Event (needs to happen before finding nextStartRealTime)
-                if (currentGameMinutes >= startToday && currentGameMinutes < endToday) {
-                    status = 'active';
-                    
-                    // Countdown to END
-                    const gameMinutesLeft = endToday - currentGameMinutes;
-                    const realSecondsLeft = gameMinutesLeft * (60 / gameSpeedMultiplier);
-                    const realTimeLeftMs = realSecondsLeft * 1000;
-                    countdown = formatCountdown(realTimeLeftMs);
-                }
-
-                // 2. Calculate Upcoming Time
-                let timeUntil = startToday - currentGameMinutes;
-                
-                // If the event start time is in the past of the current game day, use the next day's start time
-                if (timeUntil <= 0) {
-                   timeUntil = (startToday + intervalGameMinutes) - currentGameMinutes;
-                }
-
-                if (timeUntil > 0 && timeUntil < minTimeDiff) {
-                    minTimeDiff = timeUntil;
-                }
-            }
-
-
-            // Now calculate the real time for the absolute next start
-            if (minTimeDiff !== Infinity) {
-                const realSecondsUntilNext = minTimeDiff * (60 / gameSpeedMultiplier);
-                nextStartRealTime = new Date(now.getTime() + (realSecondsUntilNext * 1000));
-                const realTimeUntilNextMs = realSecondsUntilNext * 1000;
-                
-                if (status !== 'active') { 
-                    // Only set upcoming countdown if not already active
-                    if (realTimeUntilNextMs <= 3600000) { // 1 hour threshold for 'upcoming'
-                        status = 'upcoming';
-                        countdown = formatCountdown(realTimeUntilNextMs);
-                    } else {
-                        status = 'inactive';
-                        countdown = null;
-                    }
-                }
+            // GT Minutes offset from sync point to event start (in one 24h GT cycle)
+            let gtOffsetToStart = eventGTStartMinutes - syncPointGameMinutes; 
+            if (gtOffsetToStart < 0) {
+                 gtOffsetToStart += 24 * 60; // Wrap around if 06:00 GT is 'before' 10:00 GT
             }
             
-            let eventEndRealTime = null;
-            if (status === 'active' && nextStartRealTime) {
-                // End time of the CURRENT active window is: Next Start Time (N) - (Interval - Duration)
-                // N - (4h - 1h) = N - 3h
-                eventEndRealTime = new Date(nextStartRealTime.getTime() - (realIntervalMs - realDurationMs)); 
+            // Real time equivalent of the offset (GT Minutes / 6)
+            const realOffsetToStartMs = (gtOffsetToStart / gameSpeedMultiplier) * 60 * 1000;
+
+            // 4 real hours = 1 GT day (The event repeat interval)
+            const realIntervalMs = 4 * 60 * 60 * 1000; 
+            
+            // Event duration requested by user: 30 real minutes
+            const realDurationMs = 30 * 60 * 1000; 
+
+            // Find the real-time equivalent of the sync point today (14:00 PDT)
+            let referenceDate = new Date(now);
+            referenceDate.setHours(syncHoursPDT, syncMinutesPDT, 0, 0); 
+
+            // The time the 06:00 GT event should have started today
+            let lastEventStartRealTime = new Date(referenceDate.getTime() + realOffsetToStartMs);
+
+            // Find the most recent actual event start time (on or before 'now')
+            while (lastEventStartRealTime.getTime() > now.getTime()) {
+                lastEventStartRealTime = new Date(lastEventStartRealTime.getTime() - realIntervalMs);
+            }
+            
+            // The time the event ends (30 real minutes after start)
+            const eventEndRealTime = new Date(lastEventStartRealTime.getTime() + realDurationMs);
+
+            // The time the next event starts (4 real hours after last start)
+            let nextEventStartRealTime = new Date(lastEventStartRealTime.getTime() + realIntervalMs);
+            
+            // --- Determine Status and Countdown ---
+            const timeUntilNext = nextEventStartRealTime.getTime() - now.getTime();
+            const timeLeft = eventEndRealTime.getTime() - now.getTime();
+            
+            const nextTimeDetail = `Next: ${formatDateWithDay(nextEventStartRealTime)}`;
+
+            if (now >= lastEventStartRealTime && now < eventEndRealTime) {
+                // Event is ACTIVE (within the 30-minute window)
+                return { 
+                    status: 'active', 
+                    countdown: formatCountdown(timeLeft), 
+                    nextTime: nextTimeDetail,
+                    nextStartTime: nextEventStartRealTime,
+                    endTime: eventEndRealTime
+                };
             }
 
-            const nextTimeDetail = nextStartRealTime ? `Next: ${formatDateWithDay(nextStartRealTime)}` : 'No schedule found';
+            if (timeUntilNext <= 3600000) { // 1 hour threshold for 'upcoming'
+                // Event is UPCOMING (less than 1 hour until the next start)
+                return { 
+                    status: 'upcoming', 
+                    countdown: formatCountdown(timeUntilNext), 
+                    nextTime: nextTimeDetail,
+                    nextStartTime: nextEventStartRealTime,
+                    endTime: null
+                };
+            }
 
+            // Event is INACTIVE
             return { 
-                status, 
-                countdown, 
-                nextTime: nextTimeDetail,
-                nextStartTime: nextStartRealTime,
-                endTime: eventEndRealTime
+                status: 'inactive', 
+                nextTime: nextTimeDetail, 
+                countdown: null,
+                nextStartTime: nextEventStartRealTime,
+                endTime: null
             };
         }
 
+        /**
+         * Calculates status for real-time cyclical events (Rifts).
+         * Now correctly implements the 30-minute real-life duration.
+         */
         function getRealTimeEventStatus(eventName, realTimeSchedule) {
             const now = new Date();
             const intervalMs = realTimeSchedule.intervalHours * 60 * 60 * 1000;
 
+            // The time the first event of the day should occur based on the fixed MSK time
             const todayStart = convertMSKOffsetToLocal(realTimeSchedule.startTime).date;
 
             let lastEventStart = new Date(todayStart);
+            
+            // Find the most recent event start time (on or before 'now')
+            // This is needed because the 'todayStart' might be in the future (e.g., if now is 10:00 and start is 12:20)
             while (lastEventStart.getTime() + intervalMs < now.getTime()) {
                 lastEventStart = new Date(lastEventStart.getTime() + intervalMs);
             }
-
-            if (lastEventStart.getTime() > now.getTime() && intervalMs > 0) {
+            // If the loop overshot (e.g., now is 10:00 and lastEventStart is 12:20, and interval takes it to 16:20)
+             if (lastEventStart.getTime() > now.getTime()) {
                  lastEventStart = new Date(lastEventStart.getTime() - intervalMs);
             }
+
+            // MODIFIED: Rift duration is now 30 real minutes
+            const eventDurationMs = 30 * 60 * 1000;
+            const eventEnd = new Date(lastEventStart.getTime() + eventDurationMs);
             
-            const eventEnd = new Date(lastEventStart.getTime() + (60 * 60 * 1000));
+            // Calculate the absolute next start time 
+            let nextEventStart = new Date(lastEventStart.getTime() + intervalMs);
             
-            // Calculate the absolute next start time regardless of current status
-            let nextEventStart = new Date(lastEventStart);
-            if (now >= eventEnd || (now >= lastEventStart && now < eventEnd)) {
-                // If event ended or is active, the next is simply the interval later
-                nextEventStart = new Date(lastEventStart.getTime() + intervalMs);
-            } 
-            // Ensure nextEventStart is actually in the future if we somehow lagged
+            // Ensure nextEventStart is actually in the future 
             while (nextEventStart.getTime() < now.getTime()) {
                  nextEventStart = new Date(nextEventStart.getTime() + intervalMs);
             }
@@ -926,7 +952,7 @@
                 }
             }
             
-            // --- 3. Return Status based on findings (MODIFIED to use formatCountdown) ---
+            // --- 3. Return Status based on findings ---
             const nextTimeDetail = nextOccurrenceDate ? `Next: ${formatDateWithDay(nextOccurrenceDate)}` : 'No schedule';
 
             if (activeEvent) {
@@ -966,7 +992,7 @@
             return { status: 'inactive', nextTime: 'No schedule', countdown: null, nextStartTime: null, endTime: null };
         }
         
-        // --- Table Rendering (MODIFIED for icon and removed tooltip) ---
+        // --- Table Rendering (UNCHANGED) ---
 
         function updateEventTables() {
             updateAllTimes(); 
@@ -984,6 +1010,7 @@
                 tableBody.appendChild(headerRow);
                 
                 const eventDetails = Object.entries(events).map(([eventName, eventData]) => {
+                    // Call the appropriate status function
                     const status = getEventStatus(eventName, eventData, categoryId); 
                     let sortPriority = 2; // Default to inactive
 
