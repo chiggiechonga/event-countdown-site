@@ -122,6 +122,8 @@
         flex-direction: column;
         position: relative; /* Keep this for the tooltip positioning */
         cursor: pointer;
+        /* ADDED: Fix empty space to the right of text */
+        flex-grow: 1; 
     }
     .event-title {
         font-weight: 500;
@@ -180,71 +182,6 @@
         border: 1px solid #66bb6a40; /* Very light green border */
         background: rgba(76, 175, 80, 0.1); /* Subtle green background */
     }
-
-    /* --- TOOLTIP STYLES (MODIFIED to position BELOW) --- */
-    .tooltip-trigger {
-        position: relative;
-        cursor: pointer;
-        display: block; 
-    }
-    .event-details.tooltip-trigger {
-        height: 100%;
-        padding: 4px 0; 
-    }
-    .event-tooltip {
-        position: absolute;
-        /* MODIFIED: Position BELOW the element to prevent clipping */
-        top: calc(100% + 8px); 
-        left: 50%; 
-        transform: translateX(-50%); /* Center horizontally */
-        z-index: 10;
-        min-width: 180px; 
-        max-width: 300px; 
-        padding: 8px 10px; 
-        /* Appearance */
-        background: rgba(0, 0, 0, 0.9); 
-        border: 1px solid #444; 
-        border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-        color: #e0e0e0;
-        font-size: 12px;
-        /* Visibility */
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s, transform 0.2s;
-        pointer-events: none; 
-        white-space: normal;
-        text-align: left;
-    }
-    /* Tooltip Pointer (Caret/Corner) - MODIFIED to point UP */
-    .event-tooltip::after {
-        content: '';
-        position: absolute;
-        bottom: 100%; /* Position right at the TOP edge of the tooltip box */
-        left: 50%;
-        margin-left: -5px; 
-        border-width: 5px;
-        border-style: solid;
-        /* Arrow pointing UP, matching background */
-        border-color: transparent transparent rgba(0, 0, 0, 0.9) transparent; 
-        z-index: 11;
-    }
-    /* Hover state with slight animation - MODIFIED for downward shift */
-    .tooltip-trigger:hover .event-tooltip {
-        opacity: 1;
-        visibility: visible;
-        /* Slight downward shift on hover for effect */
-        transform: translate(-50%, 2px); 
-    }
-    /* Tooltip content spacing adjustment */
-    .tooltip-item {
-        margin-top: 6px; 
-        line-height: 1.4;
-    }
-    .tooltip-item:first-child {
-        margin-top: 0;
-    }
-
 
     @media (max-width: 768px) {
         .tables-grid {
@@ -704,8 +641,12 @@
             return `${dayName}, ${month} ${day}, ${formatTime12Hour(date)}`;
         }
 
-        // MODIFIED: Formats a millisecond difference into HH:MM:SS or MM:SS if hours is 0
-        function formatTimeDifference(ms) {
+        // Formats a millisecond difference into HH:MM:SS, MM:SS, or Ss
+        // This function implements the requested logic:
+        // - Use HH:MM:SS format elements.
+        // - If hours=0, hide the hours part (e.g., use MM:SS).
+        // - If minutes=0 and hours=0, hide the minutes part (e.g., use Ss).
+        function formatCountdown(ms) {
             if (ms < 0) ms = 0;
             const totalSeconds = Math.floor(ms / 1000);
             const hours = Math.floor(totalSeconds / 3600);
@@ -714,94 +655,21 @@
 
             const pad = (num) => num.toString().padStart(2, '0');
             
+            // HH:MM:SS format
             if (hours > 0) {
                 return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-            } else {
+            }
+            
+            // MM:SS format (if minutes > 0)
+            if (minutes > 0) {
                 return `${pad(minutes)}:${pad(seconds)}`;
             }
+            
+            // Seconds only format
+            return `${seconds}s`;
         }
         
-        // --- Tooltip Logic (RE-ADDED to user's file) ---
-
-        function getNextOccurrences(eventName, eventData) {
-            const schedule = eventData.schedule;
-            // Only generate tooltip details for schedule-based events
-            if (!schedule) return []; 
-
-            const now = new Date();
-            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            let occurrences = [];
-            const MAX_DAYS_CHECK = 8; // Check up to 8 days out
-            const MAX_OCCURRENCES = 3; // Look for 3 to ensure we capture the next 2 true future ones
-            
-            // Get the current day of the week *in Server Time*
-            const offsetMs = SERVER_TIME_OFFSET_HOURS * 3600000;
-            const serverTimeDate = new Date(now.getTime() + now.getTimezoneOffset() * 60000 + offsetMs);
-            
-            // Check up to 8 days out
-            for (let dayOffset = 0; dayOffset < MAX_DAYS_CHECK; dayOffset++) { 
-                if (occurrences.length >= MAX_OCCURRENCES) break;
-                
-                // Calculate the server day for this dayOffset
-                const checkDate = new Date(serverTimeDate);
-                checkDate.setDate(checkDate.getDate() + dayOffset);
-                const checkDayName = dayNames[checkDate.getDay()];
-
-                if (!schedule[checkDayName]) continue;
-
-                for (const timeRange of schedule[checkDayName]) {
-                    if (occurrences.length >= MAX_OCCURRENCES) break;
-
-                    const [startTime, endTime] = timeRange.split('-');
-                    
-                    // Calculate start and end date objects
-                    const startConverted = convertServerTimeToLocal(startTime, dayOffset);
-                    let startDate = startConverted.date;
-                    
-                    let endDate;
-                    // --- Custom End Date Logic (same as in getEventStatus) ---
-                    if (endTime === '00:00' || endTime === '24:00') {
-                        // For events that end exactly at midnight, use 00:01 of the next day as the end point for the timer
-                        const endConverted = convertServerTimeToLocal('00:01', dayOffset);
-                        endDate = endConverted.date;
-                        if (endDate.getTime() <= startDate.getTime()) {
-                             endDate.setDate(endDate.getDate() + 1);
-                        }
-                    } else if (endTime === '23:59') {
-                        const endConverted = convertServerTimeToLocal(endTime, dayOffset);
-                        endDate = endConverted.date;
-                    } else {
-                        const endConverted = convertServerTimeToLocal(endTime, dayOffset);
-                        endDate = endConverted.date;
-                        if (endDate.getTime() < startDate.getTime()) {
-                             endDate.setDate(endDate.getDate() + 1);
-                        }
-                    }
-                    // --- End Custom Logic ---
-
-                    // Check if event has not ended yet
-                    // Only include the current active event or events strictly in the future
-                    if (endDate.getTime() > now.getTime()) { 
-                         occurrences.push({ 
-                             start: startDate, 
-                             end: endDate,
-                             timeRange: `${startTime} - ${endTime} ST` // Show server time for clarity
-                         });
-                    }
-                }
-            }
-
-            // Sort by start time
-            occurrences.sort((a, b) => a.start.getTime() - b.start.getTime());
-
-            // Return the next 2 (could be 1 active + 1 upcoming, or 2 upcoming)
-            // Use a Set to ensure unique start/end pairs, then slice
-            const uniqueOccurrences = Array.from(new Map(occurrences.map(o => [`${o.start.getTime()}-${o.end.getTime()}`, o])).values());
-
-            return uniqueOccurrences.slice(0, 2); 
-        }
-
-        // --- Event Status Logic (MODIFIED for new countdown format) ---
+        // --- Event Status Logic (MODIFIED to use formatCountdown) ---
 
         function getGameTimeEventStatus(eventName, gameTimeSchedule) {
             const currentGameTime = getCurrentGameTime();
@@ -838,8 +706,8 @@
                     // Countdown to END
                     const gameMinutesLeft = endToday - currentGameMinutes;
                     const realSecondsLeft = gameMinutesLeft * (60 / gameSpeedMultiplier);
-                    const realMsLeft = realSecondsLeft * 1000;
-                    countdown = formatTimeDifference(realMsLeft); // MODIFIED
+                    const realTimeLeftMs = realSecondsLeft * 1000;
+                    countdown = formatCountdown(realTimeLeftMs);
                 }
 
                 // 2. Calculate Upcoming Time
@@ -860,13 +728,13 @@
             if (minTimeDiff !== Infinity) {
                 const realSecondsUntilNext = minTimeDiff * (60 / gameSpeedMultiplier);
                 nextStartRealTime = new Date(now.getTime() + (realSecondsUntilNext * 1000));
+                const realTimeUntilNextMs = realSecondsUntilNext * 1000;
                 
                 if (status !== 'active') { 
                     // Only set upcoming countdown if not already active
-                    if (realSecondsUntilNext <= 3600) { // 1 hour threshold for 'upcoming'
+                    if (realTimeUntilNextMs <= 3600000) { // 1 hour threshold for 'upcoming'
                         status = 'upcoming';
-                        const realMsUntil = realSecondsUntilNext * 1000;
-                        countdown = formatTimeDifference(realMsUntil); // MODIFIED
+                        countdown = formatCountdown(realTimeUntilNextMs);
                     } else {
                         status = 'inactive';
                         countdown = null;
@@ -922,15 +790,14 @@
             
             const nextTimeDetail = `Next: ${formatDateWithDay(nextEventStart)}`;
             const timeUntilNext = nextEventStart.getTime() - now.getTime();
+            const timeLeft = eventEnd.getTime() - now.getTime();
 
 
             if (now >= lastEventStart && now < eventEnd) {
-                const timeLeft = eventEnd.getTime() - now.getTime();
-                
                 // Active events now show NEXT START TIME
                 return { 
                     status: 'active', 
-                    countdown: formatTimeDifference(timeLeft), // MODIFIED
+                    countdown: formatCountdown(timeLeft), 
                     nextTime: nextTimeDetail,
                     nextStartTime: nextEventStart,
                     endTime: eventEnd
@@ -940,7 +807,7 @@
             if (timeUntilNext <= 3600000) {
                 return { 
                     status: 'upcoming', 
-                    countdown: formatTimeDifference(timeUntilNext), // MODIFIED
+                    countdown: formatCountdown(timeUntilNext), 
                     nextTime: nextTimeDetail,
                     nextStartTime: nextEventStart,
                     endTime: null
@@ -1059,16 +926,15 @@
                 }
             }
             
-            // --- 3. Return Status based on findings ---
+            // --- 3. Return Status based on findings (MODIFIED to use formatCountdown) ---
             const nextTimeDetail = nextOccurrenceDate ? `Next: ${formatDateWithDay(nextOccurrenceDate)}` : 'No schedule';
 
             if (activeEvent) {
                 const timeLeft = activeEvent.endTime.getTime() - now.getTime();
                 
-                // Simplified countdown logic to rely solely on the modified formatTimeDifference
                 return { 
                     status: 'active', 
-                    countdown: formatTimeDifference(timeLeft), 
+                    countdown: formatCountdown(timeLeft), 
                     nextTime: nextTimeDetail,
                     nextStartTime: nextOccurrenceDate, 
                     endTime: activeEvent.endTime
@@ -1078,10 +944,9 @@
             if (upcomingEvent) {
                 const timeUntil = upcomingEvent.startTime.getTime() - now.getTime();
                 
-                // Simplified countdown logic to rely solely on the modified formatTimeDifference
                 return { 
                     status: 'upcoming', 
-                    countdown: formatTimeDifference(timeUntil), 
+                    countdown: formatCountdown(timeUntil), 
                     nextTime: nextTimeDetail,
                     nextStartTime: nextOccurrenceDate,
                     endTime: null
@@ -1101,7 +966,7 @@
             return { status: 'inactive', nextTime: 'No schedule', countdown: null, nextStartTime: null, endTime: null };
         }
         
-        // --- Table Rendering (MODIFIED for icons and tooltip) ---
+        // --- Table Rendering (MODIFIED for icon and removed tooltip) ---
 
         function updateEventTables() {
             updateAllTimes(); 
@@ -1157,47 +1022,7 @@
                     
                     const nextTimeFormatted = status.nextTime || '';
                     
-                    // --- Tooltip Logic (RE-ADDED) ---
-                    // Note: This must be called inside the loop as it relies on eventData
-                    const nextTwo = getNextOccurrences(eventName, eventData);
-                    let tooltipHTML = '';
-                    
-                    if (nextTwo.length > 0) {
-                        const tooltipItems = nextTwo.map(occ => {
-                            const isCurrent = occ.start.getTime() <= now.getTime() && occ.end.getTime() > now.getTime();
-                            
-                            // Get local date/time parts
-                            const localDayTime = formatDateWithDay(occ.start); 
-                            const localTimeOnly = localDayTime.split(', ')[2]; 
-                            const localDay = localDayTime.split(', ').slice(0, 2).join(', '); 
-                            
-                            // Primary text: Server Time range (bold) or Active status
-                            const primaryText = isCurrent ? 
-                                `<span style="color:#66bb6a; font-weight:700;">Active until ${formatTime12Hour(occ.end)}</span>` :
-                                `<span style="font-weight:700;">${occ.timeRange}</span>`;
-                                
-                            // Secondary text: Local time details
-                            const secondaryText = isCurrent ? 
-                                 `<span style="font-size:11px; color: #bbb;">(Ends ${localDay}, ${formatTime12Hour(occ.end)})</span>` :
-                                 `<span style="font-size:11px; color: #bbb;">(${localDay}, starts ${localTimeOnly})</span>`;
-
-                            return `
-                                <div class="tooltip-item">
-                                    <div>${primaryText}</div>
-                                    <div>${secondaryText}</div>
-                                </div>
-                            `;
-                        }).join('');
-
-                        tooltipHTML = `
-                            <div class="event-tooltip">
-                                ${tooltipItems}
-                            </div>
-                        `;
-                    }
-                    // --- Tooltip Logic END ---
-                    
-                    // Build the countdown cell content (unchanged)
+                    // Build the countdown cell content
                     let countdownContent = status.countdown || '';
                     if (status.status === 'upcoming') {
                          // Wrap the countdown and add the 'Upcoming' badge
@@ -1231,10 +1056,9 @@
                     row.innerHTML = `
                         <td class="event-name"> 
                             ${iconHTML}
-                            <div class="event-details tooltip-trigger"> 
+                            <div class="event-details"> 
                                 <div class="event-title">${eventName}</div> 
                                 <div class="next-time">${nextTimeFormatted}</div>
-                                ${tooltipHTML}
                             </div> 
                         </td> 
                         <td> 
