@@ -733,20 +733,26 @@
 
         // --- Utility Functions (Time Formatting/Conversion) ---
 
-        // Converts Server Time (ST) input to a Date object in the local timezone.
-        function convertServerTimeToLocal(stTime, dayOffset = 0) {
+        /**
+         * Converts Server Time (ST) input to a Date object in the local timezone.
+         * @param {string} stTime - The time string in 24-hour Server Time (e.g., '16:00').
+         * @param {Date} baseDate - The Date object representing the correct day for the schedule (e.g., Saturday, ideally set to 00:00 local time).
+         * @returns {object} { time: string, date: Date }
+         */
+        function convertServerTimeToLocal(stTime, baseDate) {
             const [hours, minutes] = stTime.split(':').map(Number);
             
             // Calculate the UTC time that corresponds to the input ST time
             let utcHours = hours - SERVER_TIME_OFFSET_HOURS;
             let utcMinutes = minutes;
 
-            let date = new Date();
-            // Set time based on UTC
-            date.setUTCHours(utcHours, utcMinutes, 0, 0);
+            // Start with the baseDate (which already has the correct day: today, tomorrow, etc.)
+            let date = new Date(baseDate); 
 
-            // Apply the intended day offset from the caller (0 for today, 1 for next day, etc.)
-            date.setDate(date.getDate() + dayOffset);
+            // Set the time based on the calculated UTC time.
+            // This correctly converts the time and handles any day shift that happens *due to the time conversion*
+            // relative to the baseDate's midnight.
+            date.setUTCHours(utcHours, utcMinutes, 0, 0);
 
             // Format time in 24-hour for the local date object (used in nextTime detail)
             return { 
@@ -792,8 +798,6 @@
 
         /**
          * Formats a millisecond difference into a dynamic countdown format: [dd:][hh:]mm:ss.
-         * Days (dd:) are omitted if 0. Hours (hh:) are omitted if days=0 AND hours=0.
-         * * MODIFIED: If forceHours is true, HH: is always included unless days are present.
          * @param {number} ms - Milliseconds remaining.
          * @param {boolean} forceHours - If true, ensures HH: is displayed even if hours=0 (for hh:mm:ss format).
          * @returns {string} Formatted countdown string ([DD:][HH:]MM:SS or [HH:]MM:SS).
@@ -817,7 +821,6 @@
 
             // 2. Add hours if necessary (if days > 0, hours > 0, or forceHours is true)
             // If days > 0, the hours part is always included because it is part of DD:HH:MM:SS
-            // If forceHours is true, we display HH:MM:SS even if HH=00 (unless days > 0, then we rely on DD:HH:MM:SS)
             if (days > 0 || hours > 0 || forceHours) {
                 // Prepend HH: to the existing MM:SS string
                 countdownString = `${pad(hours)}:${countdownString}`;
@@ -968,7 +971,11 @@
                 const allEventOccurrences = [];
                 for (let i = 0; i < 30; i++) { 
                     const searchDate = new Date(now);
-                    searchDate.setDate(now.getDate() + i);
+                    
+                    // *** CRITICAL FIX: Anchor searchDate to local midnight to prevent time bleed issues ***
+                    searchDate.setHours(0, 0, 0, 0); 
+                    
+                    searchDate.setDate(searchDate.getDate() + i);
 
                     const dayIndex = searchDate.getDay();
                     const dayName = dayNames[dayIndex];
@@ -980,8 +987,9 @@
                         const [startTimeStr, endTimeStr] = schedule.split('-');
 
                         // Convert start and end times to local Date objects for comparison
-                        const startLocal = convertServerTimeToLocal(startTimeStr, i);
-                        const endLocal = convertServerTimeToLocal(endTimeStr, i);
+                        // We pass the local-midnight-anchored searchDate to ensure the time conversion is correct.
+                        const startLocal = convertServerTimeToLocal(startTimeStr, searchDate); 
+                        const endLocal = convertServerTimeToLocal(endTimeStr, searchDate); 
 
                         // Adjust the end date for midnight wrapping:
                         // If end time is before start time (e.g. 22:00-02:00) or it's 24:00, it's next day.
@@ -1006,7 +1014,6 @@
                 // Sort and return only the next 'count' start times
                 allEventOccurrences.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
                 
-                // We must ensure the first item is the *actual* next event (which may be one currently running)
                 // Filter out any instances that have already ended
                 const futureOccurrences = allEventOccurrences.filter(o => o.endTime.getTime() > now.getTime());
 
@@ -1051,8 +1058,12 @@
                         for (const schedule of schedulesForDay) {
                             const [startTimeStr, endTimeStr] = schedule.split('-');
                             
-                            // This is the local time string of the *expected* start time
-                            const startLocalCheck = convertServerTimeToLocal(startTimeStr);
+                            // Create a temporary date anchored to the event's start date but reset to midnight
+                            const baseDateForConversion = new Date(nextStartTime);
+                            baseDateForConversion.setHours(0, 0, 0, 0); 
+                            
+                            // Convert the ST time string using the event's day as the anchor
+                            const startLocalCheck = convertServerTimeToLocal(startTimeStr, baseDateForConversion);
 
                             // The 'nextStartTime' Date object already contains the correct local time and date
                             const nextEventTime = `${nextStartTime.getHours().toString().padStart(2, '0')}:${nextStartTime.getMinutes().toString().padStart(2, '0')}`;
@@ -1161,13 +1172,16 @@
                     let nextStartTime = allNextOccurrences[0];
                     let status = getEventStatus(nextStartTime, eventName, categoryId);
                     
-                    // If the first one is past, check the second one (this mainly handles events with long duration like 00:00-04:00 ST)
+                    // If the event is already inactive, it means it has ended, so we look at the next occurrence in the list.
+                    // This is primarily for events that might have a very short duration or when the initial calculation
+                    // happened right after the event ended.
                     if (status.status === 'inactive' && allNextOccurrences.length > 1) {
                          // Fallback logic to check if the next-next one is active or upcoming
                         nextStartTime = allNextOccurrences[1];
                         status = getEventStatus(nextStartTime, eventName, categoryId);
                     }
                     // Final safety check: if still inactive, use the first event as the basis for the far-off schedule display
+                    // This handles cases where only 1 occurrence was found, and it's already passed.
                     if(status.status === 'inactive') {
                         nextStartTime = allNextOccurrences[0];
                         status = getEventStatus(nextStartTime, eventName, categoryId);
