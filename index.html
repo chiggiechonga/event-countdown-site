@@ -991,11 +991,15 @@
                         const startLocal = convertServerTimeToLocal(startTimeStr, searchDate); 
                         const endLocal = convertServerTimeToLocal(endTimeStr, searchDate); 
 
-                        // Adjust the end date for midnight wrapping:
-                        // If end time is before start time (e.g. 22:00-02:00) or it's 24:00, it's next day.
-                        if (endTimeStr === '24:00' || (startLocal.date.getTime() > endLocal.date.getTime() && endLocal.date.getDay() === startLocal.date.getDay())) {
-                            endLocal.date.setDate(endLocal.date.getDate() + 1);
-                        }
+// Adjust the end date for events that cross midnight (00:00 or earlier end than start)
+if (
+    endTimeStr === '24:00' ||
+    endTimeStr === '00:00' ||
+    endLocal.date <= startLocal.date
+) {
+    endLocal.date.setDate(endLocal.date.getDate() + 1);
+}
+
                         
                         // Check if the event's start time is in the future relative to 'now'
                         // OR if the event is currently active
@@ -1414,5 +1418,6 @@
     </script>
 </body>
 </html>
+
 
 
