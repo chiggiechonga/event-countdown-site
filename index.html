@@ -493,7 +493,7 @@
                     // Times are Server Time (UTC+3) - VERIFIED
                     schedule: {
                         'monday': ['19:30-20:30'],
-                        'thursday': ['19:30-20:30'],
+                        'wednesday': ['19:30-20:30'],
                         'saturday': ['19:30-20:30']
                     }
                 },
@@ -991,15 +991,11 @@
                         const startLocal = convertServerTimeToLocal(startTimeStr, searchDate); 
                         const endLocal = convertServerTimeToLocal(endTimeStr, searchDate); 
 
-// Adjust the end date for events that cross midnight (00:00 or earlier end than start)
-if (
-    endTimeStr === '24:00' ||
-    endTimeStr === '00:00' ||
-    endLocal.date <= startLocal.date
-) {
-    endLocal.date.setDate(endLocal.date.getDate() + 1);
-}
-
+                        // Adjust the end date for midnight wrapping:
+                        // If end time is before start time (e.g. 22:00-02:00) or it's 24:00, it's next day.
+                        if (endTimeStr === '00:00' || endTimeStr === '24:00' || endLocal.date <= startLocal.date) {
+                            endLocal.date.setDate(endLocal.date.getDate() + 1);
+                        }
                         
                         // Check if the event's start time is in the future relative to 'now'
                         // OR if the event is currently active
@@ -1079,7 +1075,7 @@ if (
                                 let stEndMinutes = parseInt(endTimeStr.split(':')[0]) * 60 + parseInt(endTimeStr.split(':')[1]);
                                 
                                 // If end time is earlier than start time (or 24:00), it means it wraps the day
-                                if (stEndMinutes <= stStartMinutes && endTimeStr !== '00:00') {
+                                if (stEndMinutes <= stStartMinutes) {
                                     stEndMinutes += 24 * 60;
                                 }
                                 durationMinutes = stEndMinutes - stStartMinutes;
@@ -1418,6 +1414,3 @@ if (
     </script>
 </body>
 </html>
-
-
-
