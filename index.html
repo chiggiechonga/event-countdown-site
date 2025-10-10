@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -940,24 +941,19 @@
                 const intervalMs = intervalHours * 3600 * 1000;
                 
                 // Get the local time equivalent of the MSK reference point
+                // Reference time is anchored to today's UTC date with MSK->UTC adjustment
                 const referenceLocal = convertMSKOffsetToLocal(startTime);
                 let referenceTimeMs = referenceLocal.date.getTime();
 
-                // Find the starting event that precedes 'now'
-                let prevEventMs = referenceTimeMs;
-                while (prevEventMs + intervalMs < now.getTime()) {
-                    prevEventMs += intervalMs;
-                }
+                // --- FIX: Compute next occurrence robustly using math (works when referenceTime is in past or future) ---
+                // Find smallest n (integer) such that referenceTimeMs + n*intervalMs >= now
+                const nowMs = Date.now();
+                const diff = nowMs - referenceTimeMs;
+                // Use Math.ceil on the fraction to find n. Works for negative and positive diffs.
+                const n = Math.ceil(diff / intervalMs);
+                const nextEventMs = referenceTimeMs + n * intervalMs;
 
-                // The next event starts after the previous one
-                let nextEventMs = prevEventMs;
-                
-                // Ensure we find the *very next* event that is upcoming or in progress
-                while (nextEventMs < now.getTime()) {
-                    nextEventMs += intervalMs;
-                }
-
-                // Collect the next 'count' occurrences
+                // Collect the next 'count' occurrences starting from nextEventMs
                 for (let i = 0; i < count; i++) {
                     const occurrenceTime = new Date(nextEventMs + i * intervalMs);
                     occurrences.push(occurrenceTime);
@@ -997,11 +993,8 @@
                             endLocal.date.setDate(endLocal.date.getDate() + 1);
                         }
                         
-                        // Check if the event's start time is in the future relative to 'now'
-                        // OR if the event is currently active
-                        if (startLocal.date.getTime() >= now.getTime() || 
-                            (startLocal.date.getTime() < now.getTime() && endLocal.date.getTime() > now.getTime())) {
-                            
+                        // FIX: include all future events (including later same-day ones)
+                        if (endLocal.date.getTime() > now.getTime()) {
                             // If it's upcoming or currently active, it's a valid occurrence
                             allEventOccurrences.push({ 
                                 startTime: startLocal.date, 
