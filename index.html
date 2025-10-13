@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -494,7 +493,7 @@
                     // Times are Server Time (UTC+3) - VERIFIED
                     schedule: {
                         'monday': ['19:30-20:30'],
-                        'thursday': ['19:30-20:30'],
+                        'wednesday': ['19:30-20:30'],
                         'saturday': ['19:30-20:30']
                     }
                 },
@@ -946,19 +945,20 @@
                 let referenceTimeMs = referenceLocal.date.getTime();
 
                 // --- FIX: Compute next occurrence robustly using math (works when referenceTime is in past or future) ---
-                // Find smallest n (integer) such that referenceTimeMs + n*intervalMs >= now
-                const nowMs = Date.now();
-                const diff = nowMs - referenceTimeMs;
-                // Use Math.ceil on the fraction to find n. Works for negative and positive diffs.
-                const n = Math.ceil(diff / intervalMs);
-                const nextEventMs = referenceTimeMs + n * intervalMs;
+const nowMs = Date.now();
+const diff = nowMs - referenceTimeMs;
 
-                // Collect the next 'count' occurrences starting from nextEventMs
-                for (let i = 0; i < count; i++) {
-                    const occurrenceTime = new Date(nextEventMs + i * intervalMs);
-                    occurrences.push(occurrenceTime);
-                }
-                return occurrences;
+// Compute number of full intervals since reference
+const intervalsPassed = diff / intervalMs;
+const lastStartMs = referenceTimeMs + Math.floor(intervalsPassed) * intervalMs;
+const nextStartMs = lastStartMs + (nowMs >= lastStartMs && nowMs < lastStartMs + 30 * 60 * 1000 ? 0 : intervalMs); // 30m active window
+
+// Collect the next 'count' occurrences starting from nextStartMs
+for (let i = 0; i < count; i++) {
+    const occurrenceTime = new Date(nextStartMs + i * intervalMs);
+    occurrences.push(occurrenceTime);
+}
+return occurrences;
             }
 
             // --- Logic for Fixed Server Time Events (Most common) ---
@@ -1407,4 +1407,3 @@
     </script>
 </body>
 </html>
-
