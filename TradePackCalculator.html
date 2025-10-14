@@ -1,294 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trade Pack Calculator (Auto-fetch)</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Packs Calculator</title>
 <style>
-    body { box-sizing: border-box; font-family: Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #0f1113; color: #e0e0e0; min-height: 100vh; }
-    .container { max-width: 1400px; margin: 0 auto; }
-    .info-box { background: rgba(0,0,0,0.75); padding: 20px; margin-bottom: 20px; border-radius: 12px; border: 1px solid #222; }
-    .header { text-align: center; margin-bottom: 10px; }
-    .header h1 { margin: 0; font-size: 2rem; color: #fff; }
-    .sub { color: #9aa6b2; font-size: 14px; }
-    .calculator-section { background: #121316; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #222; }
-    .section-header { font-size: 16px; font-weight: 700; color: #e6eef6; margin-bottom: 12px; }
-    .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 14px; }
-    label { display:block; font-size: 13px; color:#b9c6cf; margin-bottom:6px; }
-    select,input { width: 100%; padding: 10px; background:#0e0f10; border:1px solid #2a2e33; color:#e6eef6; border-radius:8px; }
-    .checkbox-row { display:flex; gap:12px; align-items:center; margin-top:10px; }
-    .btn { padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
-    .btn-primary { background:#64B5F6; color:#000; }
-    .results-table { width:100%; border-collapse:collapse; margin-top:16px; }
-    .results-table th, .results-table td { padding:10px; text-align:left; border-bottom:1px solid #222; font-size:14px; }
-    .results-table th { background:#2f3b40; color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.6px; }
-    .loading { color:#ffd54f; }
-    .error { color:#ef9a9a; }
-    @media (max-width:720px){ .input-grid{grid-template-columns:1fr;} }
+  body {
+    box-sizing: border-box;
+    font-family: Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    color: #e0e0e0;
+    background-image: url('https://aa.cdn.gmru.net/ms/39fd61d35c175537444830cd8e3d31e5.jpg');
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center center;
+    background-color: rgba(0, 0, 0, 0.25);
+    background-blend-mode: multiply;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  .info-box {
+    background: rgba(0, 0, 0, 0.85);
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    border: 1px solid #333;
+  }
+  .header { text-align: center; position: relative; }
+  .header h1 {
+    margin: 0 0 10px 0;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+  }
+  .header-link, .back-link {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #FDD835;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border: 1px solid #FDD83540;
+    border-radius: 6px;
+    background: rgba(253, 216, 53, 0.1);
+    transition: all 0.2s ease;
+  }
+  .header-link { right: 20px; }
+  .back-link { left: 20px; }
+  .header-link:hover, .back-link:hover {
+    background: rgba(253, 216, 53, 0.2);
+    border-color: #FDD83580;
+  }
+  .calculator-section {
+    background: #252525;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .section-header {
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #546E7A;
+  }
+  .input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .input-group { display: flex; flex-direction: column; gap: 8px; }
+  .input-group label { font-size: 14px; font-weight: 500; color: #b0b0b0; }
+  .input-group select, .input-group input {
+    padding: 10px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 14px;
+  }
+  .input-group select:focus, .input-group input:focus {
+    outline: none;
+    border-color: #64B5F6;
+  }
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+  .checkbox-group label { font-size: 14px; color: #e0e0e0; cursor: pointer; }
+  .button-group { display: flex; gap: 15px; margin-top: 20px; }
+  .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-primary { background: #64B5F6; color: #000; }
+  .btn-primary:hover { background: #42A5F5; }
+  .btn-secondary { background: #546E7A; color: white; }
+  .btn-secondary:hover { background: #455A64; }
+  .btn-success { background: #66bb6a; color: #000; }
+  .btn-success:hover { background: #4caf50; }
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  .results-table th, .results-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #333;
+    font-size: 14px;
+  }
+  .results-table th {
+    background: #546E7A;
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  .results-table tbody tr { background: #252525; transition: background 0.2s; }
+  .results-table tbody tr:hover { background: #2a2a2a; }
+  .ingredient-box {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+  }
+  .ingredient-box h3 { color: #FDD835; margin-top: 0; font-size: 16px; }
 </style>
 </head>
 <body>
   <div class="container">
-    <div class="info-box header">
-      <h1>Trade Pack Calculator</h1>
-      <div class="sub">Auto-fetching base prices & recipes from your Google Sheets (online mode)</div>
-      <div id="status" class="sub loading">Loading data...</div>
+    <div class="info-box">
+      <div class="header">
+        <a href="index.html" class="back-link">Event Schedules</a>
+        <h1>Trade Packs Calculator</h1>
+      </div>
     </div>
 
     <div class="calculator-section">
-      <div class="section-header">Calculator</div>
+      <div class="section-header">Trade Routes</div>
       <div class="input-grid">
-        <div>
-          <label for="fromSelect">From</label>
-          <select id="fromSelect"></select>
-        </div>
-        <div>
-          <label for="packSelect">Pack</label>
-          <select id="packSelect"></select>
-        </div>
-        <div>
-          <label for="toSelect">To</label>
-          <select id="toSelect"></select>
-        </div>
-        <div>
-          <label for="demandInput">Demand (%)</label>
-          <input id="demandInput" type="number" value="130" min="0" step="1" />
-        </div>
+        <div class="input-group"><label for="fromSelect">From:</label><select id="fromSelect"></select></div>
+        <div class="input-group"><label for="packSelect">Pack:</label><select id="packSelect"></select></div>
+        <div class="input-group"><label for="toSelect">To:</label><select id="toSelect"></select></div>
+        <div class="input-group"><label for="demandInput">Demand (%):</label><input type="number" id="demandInput" value="130"></div>
       </div>
-
-      <div class="checkbox-row">
-        <label><input id="premiumCheck" type="checkbox" /> Premium (+5%)</label>
-        <label style="display:none" id="warContainer"><input id="warCheck" type="checkbox" /> War (+15%)</label>
-        <label><input id="supplyOwnCheck" type="checkbox" checked /> Supply Own Materials</label>
-      </div>
-
-      <div style="margin-top:12px; display:flex; gap:10px;">
+      <div class="checkbox-group"><input type="checkbox" id="premiumCheck"><label for="premiumCheck">Premium? (+5%)</label></div>
+      <div class="button-group">
         <button class="btn btn-primary" id="calcBtn">Calculate</button>
-        <button class="btn" id="clearBtn" style="background:#2f3b40;color:#fff;">Clear</button>
+        <button class="btn btn-success" id="addBtn">Add Route</button>
+        <button class="btn btn-secondary" id="clearBtn">Clear Routes</button>
       </div>
-
       <table class="results-table" id="resultsTable">
-        <thead>
-          <tr><th>From</th><th>Pack</th><th>To</th><th>Demand</th><th>Total Profit</th><th>Labor</th><th>S/L</th></tr>
-        </thead>
-        <tbody id="resultsBody"><tr><td colspan="7" style="text-align:center;color:#98a6b3;">No result yet</td></tr></tbody>
+        <thead><tr><th>From</th><th>Pack</th><th>To</th><th>Demand</th><th>Total Profit</th><th>Labor</th><th>S/L</th></tr></thead>
+        <tbody id="resultsBody"><tr><td colspan="7" style="text-align:center;color:#888;">No routes calculated yet.</td></tr></tbody>
       </table>
-
+      <div id="ingredientBox" class="ingredient-box" style="display:none;"></div>
     </div>
-
   </div>
-
 <script>
-// --- CONFIG: your published CSV URLs ---
 const PACKS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=776663831&single=true&output=csv';
 const INGREDIENTS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=681613255&single=true&output=csv';
 const RECIPES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=1495951478&single=true&output=csv';
-
 const ORIGINS = ["Arcum Iris","Falcorth","Hasla","Mahadevi","Perinoor","Rokhala","Rookborne","Silent Forest","Sunbite","Tigerspine","Villanelle","Windscour","Ynystere"];
 const DESTINATIONS = ["Solis","Villanelle","Ynystere"];
-
-// data holds parsed results
-let packData = []; // array of {origin, packName, to: 'Solis'|'Villanelle'|'Ynystere', baseValue}
-let ingredientCosts = {}; // name -> silver cost
-let packRecipes = {}; // packName -> [{name, qty}, ...]
-
-// robust CSV parser (handles quoted commas)
-function parseCSV(text){
-  const rows = [];
-  let cur = [];
-  let token = '';
-  let inQuotes = false;
-  for (let i=0;i<text.length;i++){
-    const ch = text[i];
-    const nxt = text[i+1];
-    if (ch === '"') { inQuotes = !inQuotes; continue; }
-    if (ch === ',' && !inQuotes){ cur.push(token.trim()); token=''; continue; }
-    if ((ch === '\n' || ch === '\r') && !inQuotes){ if (token !== '' || cur.length>0){ cur.push(token.trim()); rows.push(cur); } token=''; cur=[]; // skip any following \n after \r
-      if (nxt === '\n') i++; continue; }
-    token += ch;
-  }
-  if (token !== '' || cur.length>0){ cur.push(token.trim()); rows.push(cur); }
-  return rows.filter(r=>r.length>0);
-}
-
-function showStatus(msg, level='info'){
-  const el = document.getElementById('status');
-  el.textContent = msg;
-  el.className = level==='error' ? 'sub error' : 'sub loading';
-}
-
-async function fetchText(url){
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('HTTP '+res.status);
-  return await res.text();
-}
-
-function getFreshnessBonusFromName(name){
-  if (name.includes('Luxury')) return 0.30;
-  if (name.includes('Fine')) return 0.15;
-  if (name.includes('Commercial')) return 0.05;
-  if (name.includes('Preserved')) return 0.03;
-  return 0;
-}
-
-// Build packData from the 'base prices' sheet layout described by you
-function buildPackDataFromSheet(rows){
-  // Expect rows length ~ 48 (A1:E48) but we'll guard
-  // Sections: 0..15 => to Solis, 16..31 => to Villanelle, 32..47 => to Ynystere
-  // Each row: Column A = origin name, Columns B-E = prices for pack types
-  const sections = [ {to:'Solis', start:0}, {to:'Villanelle', start:16}, {to:'Ynystere', start:32} ];
-
-  sections.forEach(section=>{
-    for (let r=section.start; r<section.start+16 && r<rows.length; r++){
-      const row = rows[r];
-      if (!row) continue;
-      const origin = row[0];
-      if (!origin) continue;
-      // columns B - E
-      const types = ['Specialty','Gilda Specialty','Local Specialty','Fertilizer Pack'];
-      for (let c=1;c<=4;c++){
-        const raw = row[c];
-        if (raw===undefined || raw==='') continue;
-        const val = parseFloat(raw) || 0;
-        // skip self-turnins: e.g. if origin == 'Solis' and section.to == 'Solis'
-        if (origin.toLowerCase() === section.to.toLowerCase()) continue;
-        const packName = `${origin} ${types[c-1]}`;
-        packData.push({ origin, packName, to: section.to, baseValue: val });
-      }
-    }
-  });
-}
-
-function buildIngredientCostsFromSheet(rows){
-  // assume rows: [name, cost]
-  rows.forEach(r=>{
-    if (!r[0]) return;
-    const name = r[0];
-    const val = parseFloat(r[1]) || 0;
-    ingredientCosts[name] = val;
-  });
-}
-
-function buildRecipesFromSheet(rows){
-  // assume first column packName, then pairs of (ingredient, qty)
-  rows.forEach(r=>{
-    const name = r[0];
-    if (!name) return;
-    const list = [];
-    for (let i=1;i<r.length;i+=2){
-      const iname = r[i];
-      const qty = parseFloat(r[i+1]) || 0;
-      if (iname) list.push({name: iname, qty});
-    }
-    packRecipes[name] = list;
-  });
-}
-
-// Populate UI selects
-function populateSelectors(){
-  const fromSel = document.getElementById('fromSelect');
-  const toSel = document.getElementById('toSelect');
-  fromSel.innerHTML = '<option value="">Select origin</option>';
-  ORIGINS.forEach(o=> fromSel.add(new Option(o,o)));
-  toSel.innerHTML = '';
-  DESTINATIONS.forEach(d=> toSel.add(new Option(d,d)));
-}
-
-function updatePackSelect(){
-  const origin = document.getElementById('fromSelect').value;
-  const packSel = document.getElementById('packSelect');
-  packSel.innerHTML = '<option value="">Select pack</option>';
-  const filtered = packData.filter(p=>p.origin===origin);
-  filtered.forEach(p=> packSel.add(new Option(p.packName,p.packName)));
-}
-
-function formatSilver(n){
-  return (Math.round(n*100)/100).toFixed(2) + ' s';
-}
-
-function calculate(){
-  const packName = document.getElementById('packSelect').value;
-  const origin = document.getElementById('fromSelect').value;
-  const to = document.getElementById('toSelect').value;
-  const demand = parseFloat(document.getElementById('demandInput').value) || 130;
-  const premium = document.getElementById('premiumCheck').checked;
-  const war = document.getElementById('warCheck').checked;
-  const supplyOwn = document.getElementById('supplyOwnCheck').checked;
-
-  if (!packName || !origin || !to){ alert('Please select From, Pack and To'); return; }
-  const entry = packData.find(p=>p.packName===packName && p.origin===origin && p.to===to);
-  if (!entry){ alert('Pack not found for that route'); return; }
-
-  // baseValue is the published numeric; as in your example we multiply by demand etc then *100 for silver
-  let value = entry.baseValue; // e.g. 16.7064
-  // apply interest, demand, freshness
-  value = value * 1.02 * (demand/100) * (1 + getFreshnessBonusFromName(packName));
-  if (premium) value = value * 1.05;
-  if (war && to === 'Ynystere') value = value * 1.15;
-
-  const turnInSilver = value * 100; // convert numeric to silver (matches your old math)
-
-  // ingredient cost
-  let ingredientCost = 0;
-  if (!supplyOwn){
-    const recipe = packRecipes[packName] || [];
-    recipe.forEach(i=>{
-      const cost = ingredientCosts[i.name] || 0;
-      ingredientCost += cost * i.qty;
-    });
-  }
-
-  // crafting silver costs / labor simplified (kept as constants similar to original file)
-  const packType = packName.includes('Gilda') ? 'Gilda' : (packName.includes('Fertilizer') ? 'Fertilizer' : (packName.includes('Resident')?'Resident':'Regular'));
-  const craftingSilverCost = packType === 'Gilda' ? 50 : 50; // simplified
-  const baseCraftingLabor = packType === 'Gilda' ? 180 : 50;
-  const TURNIN_LABOR = 75;
-  const totalLabor = baseCraftingLabor + TURNIN_LABOR;
-
-  const totalProfit = turnInSilver - ingredientCost - craftingSilverCost;
-  const sPerL = totalProfit / totalLabor;
-
-  // display
-  const tbody = document.getElementById('resultsBody');
-  tbody.innerHTML = '';
-  const tr = document.createElement('tr');
-  tr.innerHTML = `<td>${origin}</td><td>${packName}</td><td>${to}</td><td>${demand}%</td><td>${formatSilver(totalProfit)}</td><td>${totalLabor}</td><td><strong>${sPerL.toFixed(2)} s/l</strong></td>`;
-  tbody.appendChild(tr);
-}
-
-function clearResults(){
-  document.getElementById('resultsBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#98a6b3;">No result yet</td></tr>';
-}
-
-// --- Initialization: fetch sheets and build data ---
-async function init(){
-  try{
-    showStatus('Fetching sheets...');
-    const [packText, ingredText, recipeText] = await Promise.all([fetchText(PACKS_URL), fetchText(INGREDIENTS_URL), fetchText(RECIPES_URL)]);
-    showStatus('Parsing sheets...');
-    const packRows = parseCSV(packText);
-    const ingredRows = parseCSV(ingredText);
-    const recipeRows = parseCSV(recipeText);
-
-    // build data
-    buildPackDataFromSheet(packRows);
-    buildIngredientCostsFromSheet(ingredRows);
-    buildRecipesFromSheet(recipeRows);
-
-    populateSelectors();
-    showStatus('Data loaded — choose origin and pack');
-  }catch(err){
-    console.error(err);
-    showStatus('Failed to fetch data. If you see CORS errors when opening file locally, host the HTML on a web server or use a proxy.', 'error');
-  }
-}
-
-// event bindings
-document.getElementById('fromSelect').addEventListener('change', updatePackSelect);
-document.getElementById('calcBtn').addEventListener('click', calculate);
-document.getElementById('clearBtn').addEventListener('click', clearResults);
-
-init();
+let packData=[],ingredientCosts={},packRecipes={},comparisonResults=[];
+function parseCSV(t){return t.split(/\r?\n/).map(l=>l.split(",").map(v=>v.replace(/"/g,'').trim())).filter(r=>r.length>1)}
+function getFreshnessBonus(n){if(n.includes('Luxury'))return 0.30;if(n.includes('Fine'))return 0.15;if(n.includes('Commercial'))return 0.05;if(n.includes('Preserved'))return 0.03;return 0;}
+function formatCurrency(v){let t=Math.floor(v/10000);let s=Math.floor((v%10000)/100);let c=Math.floor(v%100);return `${t}g ${s}s ${c}c`;}
+async function fetchData(){const [p,i,r]=await Promise.all([fetch(PACKS_URL).then(r=>r.text()),fetch(INGREDIENTS_URL).then(r=>r.text()),fetch(RECIPES_URL).then(r=>r.text())]);buildPackData(parseCSV(p));buildIngredients(parseCSV(i));buildRecipes(parseCSV(r));populateDropdowns();}
+function buildPackData(rows){const sections=[{to:'Solis',start:0},{to:'Villanelle',start:16},{to:'Ynystere',start:32}];sections.forEach(s=>{for(let r=s.start;r<s.start+16&&r<rows.length;r++){const row=rows[r];if(!row||!row[0])continue;const origin=row[0];const types=['Specialty','Gilda Specialty','Local Specialty','Fertilizer Pack'];for(let c=1;c<=4;c++){if(!row[c])continue;if(origin.toLowerCase()==s.to.toLowerCase())continue;const val=parseFloat(row[c])||0;packData.push({origin,packName:`${origin} ${types[c-1]}`,to:s.to,baseValue:val});}}});}
+function buildIngredients(rows){rows.forEach(r=>{if(!r[0])return;ingredientCosts[r[0]]=parseFloat(r[1])||0;});}
+function buildRecipes(rows){rows.forEach(r=>{const name=r[0];if(!name)return;packRecipes[name]=[];for(let i=1;i<r.length;i+=2){if(r[i])packRecipes[name].push({name:r[i],qty:parseFloat(r[i+1])||0});}});}
+function populateDropdowns(){const fromSel=document.getElementById('fromSelect');const toSel=document.getElementById('toSelect');ORIGINS.forEach(o=>fromSel.add(new Option(o,o)));DESTINATIONS.forEach(d=>toSel.add(new Option(d,d)));fromSel.addEventListener('change',updatePackDropdown);}
+function updatePackDropdown(){const origin=document.getElementById('fromSelect').value;const packSel=document.getElementById('packSelect');packSel.innerHTML='';[...new Set(packData.filter(p=>p.origin===origin).map(p=>p.packName))].forEach(name=>packSel.add(new Option(name,name)));}
+function calculatePack(show){const from=document.getElementById('fromSelect').value;const packName=document.getElementById('packSelect').value;const to=document.getElementById('toSelect').value;const demand=parseFloat(document.getElementById('demandInput').value)/100;const premium=document.getElementById('premiumCheck').checked;if(!from||!packName||!to)return alert('Select all fields');const entry=packData.find(p=>p.origin===from&&p.packName===packName&&p.to===to);if(!entry)return alert('Pack data missing');let value=entry.baseValue*1.02*demand*(1+getFreshnessBonus(packName));if(premium)value*=1.05;const turnIn=value*100;const recipe=packRecipes[packName]||[];let ingredCost=0;recipe.forEach(i=>ingredCost+=(ingredientCosts[i.name]||0)*i.qty);const profit=turnIn-ingredCost-50;const labor=125;const ratio=profit/labor;const result={from,packName,to,demand:(demand*100)+'%',profit,ratio,labor,recipe};if(show)showResult(result);return result;}
+function showResult(r){const tbody=document.getElementById('resultsBody');tbody.innerHTML='';const tr=document.createElement('tr');tr.innerHTML=`<td>${r.from}</td><td>${r.packName}</td><td>${r.to}</td><td>${r.demand}</td><td>${formatCurrency(r.profit)}</td><td>${r.labor}</td><td><strong>${r.ratio.toFixed(2)} s/l</strong></td>`;tbody.appendChild(tr);showIngredients(r);}
+function addRoute(){const r=calculatePack(false);if(!r)return;comparisonResults.push(r);updateComparison();}
+function updateComparison(){const tbody=document.getElementById('resultsBody');tbody.innerHTML='';comparisonResults.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${r.from}</td><td>${r.packName}</td><td>${r.to}</td><td>${r.demand}</td><td>${formatCurrency(r.profit)}</td><td>${r.labor}</td><td><strong>${r.ratio.toFixed(2)} s/l</strong></td>`;tbody.appendChild(tr);});}
+function clearRoutes(){comparisonResults=[];updateComparison();document.getElementById('ingredientBox').style.display='none';}
+function showIngredients(r){const box=document.getElementById('ingredientBox');if(!r.recipe.length){box.style.display='none';return;}let html=`<h3>Ingredients for ${r.packName}</h3><ul>`;let total=0;r.recipe.forEach(i=>{const cost=ingredientCosts[i.name]||0;const subtotal=cost*i.qty;total+=subtotal;html+=`<li>${i.qty} × ${i.name} @ ${formatCurrency(cost)} = ${formatCurrency(subtotal)}</li>`});html+='</ul><strong>Total Ingredient Cost: '+formatCurrency(total)+'</strong>';box.innerHTML=html;box.style.display='block';}
+document.getElementById('calcBtn').addEventListener('click',()=>calculatePack(true));document.getElementById('addBtn').addEventListener('click',addRoute);document.getElementById('clearBtn').addEventListener('click',clearRoutes);fetchData();
 </script>
 </body>
 </html>
