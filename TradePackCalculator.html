@@ -36,10 +36,11 @@
     font-weight: 700;
     color: white;
   }
-  .header-link, .back-link {
+  .header-link {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
+    right: 20px;
     color: #FDD835;
     text-decoration: none;
     font-size: 16px;
@@ -50,12 +51,7 @@
     background: rgba(253, 216, 53, 0.1);
     transition: all 0.2s ease;
   }
-  .header-link { right: 20px; }
-  .back-link { left: 20px; }
-  .header-link:hover, .back-link:hover {
-    background: rgba(253, 216, 53, 0.2);
-    border-color: #FDD83580;
-  }
+  .header-link:hover { background: rgba(253, 216, 53, 0.2); border-color: #FDD83580; }
   .calculator-section {
     background: #252525;
     border-radius: 12px;
@@ -91,14 +87,10 @@
     outline: none;
     border-color: #64B5F6;
   }
-  .checkbox-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+  .checkbox-row { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+  .checkbox-group { display: flex; align-items: center; gap: 6px; }
   .checkbox-group label { font-size: 14px; color: #e0e0e0; cursor: pointer; }
+  .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
   .button-group { display: flex; gap: 15px; margin-top: 20px; }
   .btn {
     padding: 12px 24px;
@@ -115,34 +107,12 @@
   .btn-secondary:hover { background: #455A64; }
   .btn-success { background: #66bb6a; color: #000; }
   .btn-success:hover { background: #4caf50; }
-  .results-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-  }
-  .results-table th, .results-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #333;
-    font-size: 14px;
-  }
-  .results-table th {
-    background: #546E7A;
-    color: white;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 12px;
-    letter-spacing: 0.5px;
-  }
+  .results-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  .results-table th, .results-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 14px; }
+  .results-table th { background: #546E7A; color: white; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
   .results-table tbody tr { background: #252525; transition: background 0.2s; }
   .results-table tbody tr:hover { background: #2a2a2a; }
-  .ingredient-box {
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 15px;
-    margin-top: 15px;
-  }
+  .ingredient-box { background: rgba(0, 0, 0, 0.6); border: 1px solid #444; border-radius: 8px; padding: 15px; margin-top: 15px; }
   .ingredient-box h3 { color: #FDD835; margin-top: 0; font-size: 16px; }
 </style>
 </head>
@@ -158,14 +128,14 @@
     <div class="calculator-section">
       <div class="section-header">Trade Routes</div>
       <div class="input-grid">
-        <div class="input-group"><label for="fromSelect">From:</label><select id="fromSelect"></select></div>
-        <div class="input-group"><label for="packSelect">Pack:</label><select id="packSelect"></select></div>
-        <div class="input-group"><label for="toSelect">To:</label><select id="toSelect"></select></div>
+        <div class="input-group"><label for="fromSelect">From:</label><select id="fromSelect"><option value="">Select Origin</option></select></div>
+        <div class="input-group"><label for="packSelect">Pack:</label><select id="packSelect"><option value="">Select Pack</option></select></div>
+        <div class="input-group"><label for="toSelect">To:</label><select id="toSelect"><option value="">Select Destination</option></select></div>
         <div class="input-group"><label for="demandInput">Demand (%):</label><input type="number" id="demandInput" value="130"></div>
       </div>
-      <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
-        <div class="checkbox-group"><input type="checkbox" id="premiumCheck"><label for="premiumCheck">Premium? (+5%)</label></div>
-        <div class="checkbox-group"><input type="checkbox" id="supplyOwnCheck"><label for="supplyOwnCheck">Use Own Materials (craft cost = 0)</label></div>
+      <div class="checkbox-row">
+        <div class="checkbox-group"><input type="checkbox" id="premiumCheck"><label for="premiumCheck">Premium</label></div>
+        <div class="checkbox-group"><input type="checkbox" id="supplyOwnCheck"><label for="supplyOwnCheck">Own Materials</label></div>
         <div class="checkbox-group" id="warContainer" style="display:none;"><input type="checkbox" id="warCheck"><label for="warCheck">War? (+15% Ynystere)</label></div>
       </div>
       <div class="button-group">
@@ -181,28 +151,26 @@
     </div>
   </div>
 <script>
-const PACKS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=776663831&single=true&output=csv';
-const INGREDIENTS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=681613255&single=true&output=csv';
-const RECIPES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=1495951478&single=true&output=csv';
-const ORIGINS = ["Arcum Iris","Falcorth","Hasla","Mahadevi","Perinoor","Rokhala","Rookborne","Silent Forest","Sunbite","Tigerspine","Villanelle","Windscour","Ynystere"];
-const DESTINATIONS = ["Solis","Villanelle","Ynystere"];
+const PACKS_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=776663831&single=true&output=csv';
+const INGREDIENTS_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=681613255&single=true&output=csv';
+const RECIPES_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=1495951478&single=true&output=csv';
+const ORIGINS=["Arcum Iris","Falcorth","Hasla","Mahadevi","Perinoor","Rokhala","Rookborne","Silent Forest","Sunbite","Tigerspine","Villanelle","Windscour","Ynystere"];
+const DESTINATIONS=["Solis","Villanelle","Ynystere"];
 let packData=[],ingredientCosts={},packRecipes={},comparisonResults=[];
 function parseCSV(t){return t.split(/\r?\n/).map(l=>l.split(",").map(v=>v.replace(/"/g,'').trim())).filter(r=>r.length>1)}
 function getFreshnessBonus(n){if(n.includes('Luxury'))return 0.30;if(n.includes('Fine'))return 0.15;if(n.includes('Commercial'))return 0.05;if(n.includes('Preserved'))return 0.03;return 0;}
-function formatCurrency(v){if(isNaN(v))v=0;let t=Math.floor(v/10000);let s=Math.floor((v%10000)/100);let c=Math.floor(v%100);return `${t}g ${s}s ${c}c`; }g ${s}s ${c}c`;}
+function formatCurrency(v){if(isNaN(v))v=0;let t=Math.floor(v/10000);let s=Math.floor((v%10000)/100);let c=Math.floor(v%100);return `${t}g ${s}s ${c}c`;}
 async function fetchData(){const [p,i,r]=await Promise.all([fetch(PACKS_URL).then(r=>r.text()),fetch(INGREDIENTS_URL).then(r=>r.text()),fetch(RECIPES_URL).then(r=>r.text())]);buildPackData(parseCSV(p));buildIngredients(parseCSV(i));buildRecipes(parseCSV(r));populateDropdowns();}
-function buildPackData(rows){const sections=[{to:'Solis',start:0},{to:'Villanelle',start:16},{to:'Ynystere',start:32}];sections.forEach(s=>{for(let r=s.start;r<s.start+16&&r<rows.length;r++){const row=rows[r];if(!row||!row[0])continue;const origin=row[0];const types=['Specialty','Gilda Specialty','Local Specialty','Fertilizer Pack'];for(let c=1;c<=4;c++){if(!row[c])continue;if(origin.toLowerCase()==s.to.toLowerCase())continue;const val=parseFloat(row[c])||0;packData.push({origin,packName:`${origin} ${types[c-1]}`,to:s.to,baseValue:val});}}});}
+function buildPackData(rows){packData=[];const sections=[{to:'Solis',start:0},{to:'Villanelle',start:16},{to:'Ynystere',start:32}];sections.forEach(s=>{for(let r=s.start;r<s.start+16&&r<rows.length;r++){const row=rows[r];if(!row||!row[0])continue;const origin=row[0];const types=['Specialty','Gilda Specialty','Local Specialty','Fertilizer Pack'];for(let c=1;c<=4;c++){if(!row[c])continue;if(origin.toLowerCase()==s.to.toLowerCase())continue;const val=parseFloat(row[c])||0;packData.push({origin,packName:`${origin} ${types[c-1]}`,to:s.to,baseValue:val});}}});}
 function buildIngredients(rows){rows.forEach(r=>{if(!r[0])return;ingredientCosts[r[0]]=parseFloat(r[1])||0;});}
-function buildRecipes(rows){rows.forEach(r=>{const name=r[0];if(!name)return;packRecipes[name]=[];for(let i=1;i<r.length;i+=2){if(r[i])packRecipes[name].push({name:r[i],qty:parseFloat(r[i+1])||0});}});}
-function populateDropdowns(){const fromSel=document.getElementById('fromSelect');const toSel=document.getElementById('toSelect');ORIGINS.forEach(o=>fromSel.add(new Option(o,o)));DESTINATIONS.forEach(d=>toSel.add(new Option(d,d)));fromSel.addEventListener('change',updatePackDropdown);toSel.addEventListener('change',updateWarCheckbox);}function updateWarCheckbox(){const to=document.getElementById('toSelect').value;const warContainer=document.getElementById('warContainer');if(to==='Ynystere'){warContainer.style.display='flex';}else{warContainer.style.display='none';document.getElementById('warCheck').checked=false;}}
-function updatePackDropdown(){const origin=document.getElementById('fromSelect').value;const packSel=document.getElementById('packSelect');packSel.innerHTML='';[...new Set(packData.filter(p=>p.origin===origin).map(p=>p.packName))].forEach(name=>packSel.add(new Option(name,name)));}
-function calculatePack(show){const from=document.getElementById('fromSelect').value;const packName=document.getElementById('packSelect').value;const to=document.getElementById('toSelect').value;const demand=parseFloat(document.getElementById('demandInput').value)/100;const premium=document.getElementById('premiumCheck').checked;const supplyOwn=document.getElementById('supplyOwnCheck').checked;const war=document.getElementById('warCheck')?document.getElementById('warCheck').checked:false;if(!from||!packName||!to)return alert('Select all fields');const entry=packData.find(p=>p.origin===from&&p.packName===packName&&p.to===to);if(!entry)return alert('Pack data missing');let value=entry.baseValue*1.02*demand*(1+getFreshnessBonus(packName));if(premium)value*=1.05;if(war && to==='Ynystere')value*=1.15;const turnInCopper=Math.round(value*10000);const recipe=packRecipes[packName]||[];let ingredCostCopper=0;if(!supplyOwn){recipe.forEach(i=>{const cost=ingredientCosts[i.name]||0;const costCopper=Math.round(cost*100);ingredCostCopper+=costCopper*i.qty;});}const craftingSilverCost= supplyOwn?0:50;const craftingCopper=craftingSilverCost*100;const profitCopper=turnInCopper-ingredCostCopper-craftingCopper;const labor=125;const ratio=profitCopper/labor;const result={from,packName,to,demand:(demand*100)+'%',profitCopper,ratio,labor,recipe,ingredCostCopper};if(show)showResult(result);return result;}
-function showResult(r){const tbody=document.getElementById('resultsBody');tbody.innerHTML='';const tr=document.createElement('tr');tr.innerHTML=`<td>${r.from}</td><td>${r.packName}</td><td>${r.to}</td><td>${r.demand}</td><td>${formatCurrency(r.profitCopper)}</td><td>${r.labor}</td><td><strong>${(r.ratio/100).toFixed(2)} s/l</strong></td>`;tbody.appendChild(tr);showIngredients(r);}</td><td>${r.packName}</td><td>${r.to}</td><td>${r.demand}</td><td>${formatCurrency(r.profit)}</td><td>${r.labor}</td><td><strong>${r.ratio.toFixed(2)} s/l</strong></td>`;tbody.appendChild(tr);showIngredients(r);}
+function buildRecipes(rows){rows.forEach(r=>{const name=r[0];if(!name)return;packRecipes[name]=[];for(let i=1;i<r.length;i+=2){if(r[i])packRecipes[name].push({name:r[i],qty:parseFloat(r[i+1])||0});}}});}
+function populateDropdowns(){const fromSel=document.getElementById('fromSelect');const toSel=document.getElementById('toSelect');fromSel.innerHTML='<option value="">Select Origin</option>';toSel.innerHTML='<option value="">Select Destination</option>';ORIGINS.forEach(o=>fromSel.add(new Option(o,o)));DESTINATIONS.forEach(d=>toSel.add(new Option(d,d)));fromSel.addEventListener('change',updatePackDropdown);toSel.addEventListener('change',updateWarCheckbox);}
+function updatePackDropdown(){const origin=document.getElementById('fromSelect').value;const packSel=document.getElementById('packSelect');packSel.innerHTML='<option value="">Select Pack</option>';
+if(!origin)return;[...new Set(packData.filter(p=>p.origin===origin).map(p=>p.packName))].forEach(name=>packSel.add(new Option(name,name)));}
+function updateWarCheckbox(){const to=document.getElementById('toSelect').value;const warContainer=document.getElementById('warContainer');if(to==='Ynystere'){warContainer.style.display='flex';}else{warContainer.style.display='none';document.getElementById('warCheck').checked=false;}}
+function calculatePack(show){const from=document.getElementById('fromSelect').value;const packName=document.getElementById('packSelect').value;const to=document.getElementById('toSelect').value;const demand=parseFloat(document.getElementById('demandInput').value)/100;const premium=document.getElementById('premiumCheck').checked;const supplyOwn=document.getElementById('supplyOwnCheck').checked;const war=document.getElementById('warCheck')?document.getElementById('warCheck').checked:false;if(!from||!packName||!to)return alert('Select all fields');const entry=packData.find(p=>p.origin===from&&p.packName===packName&&p.to===to);if(!entry)return alert('Pack data missing');let value=entry.baseValue*1.02*demand*(1+getFreshnessBonus(packName));if(premium)value*=1.05;if(war&&to==='Ynystere')value*=1.15;const turnInCopper=Math.round(value*10000);const recipe=packRecipes[packName]||[];let ingredCostCopper=0;if(!supplyOwn){recipe.forEach(i=>{const cost=ingredientCosts[i.name]||0;const costCopper=Math.round(cost*100);ingredCostCopper+=costCopper*i.qty;});}const craftingSilverCost=supplyOwn?0:50;const craftingCopper=craftingSilverCost*100;const profitCopper=turnInCopper-ingredCostCopper-craftingCopper;const labor=125;const ratio=profitCopper/labor;const result={from,packName,to,demand:(demand*100)+'%',profitCopper,ratio,labor,recipe,ingredCostCopper};if(show)showResult(result);return result;}
+function showResult(r){const tbody=document.getElementById('resultsBody');tbody.innerHTML='';const tr=document.createElement('tr');tr.innerHTML=`<td>${r.from}</td><td>${r.packName}</td><td>${r.to}</td><td>${r.demand}</td><td>${formatCurrency(r.profitCopper)}</td><td>${r.labor}</td><td><strong>${(r.ratio/100).toFixed(2)} s/l</strong></td>`;tbody.appendChild(tr);showIngredients(r);}
 function addRoute(){const r=calculatePack(false);if(!r)return;comparisonResults.push(r);updateComparison();}
-function updateComparison(){const tbody=document.getElementById('resultsBody');tbody.innerHTML='';comparisonResults.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${r.from}</td><td>${r.packName}</td><td>${r.to}</td><td>${r.demand}</td><td>${formatCurrency(r.profit)}</td><td>${r.labor}</td><td><strong>${r.ratio.toFixed(2)} s/l</strong></td>`;tbody.appendChild(tr);});}
+function updateComparison(){const tbody=document.getElementById('resultsBody');tbody.innerHTML='';comparisonResults.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${r.from}</td><td>${r.packName}</td><td>${r.to}</td><td>${r.demand}</td><td>${formatCurrency(r.profitCopper)}</td><td>${r.labor}</td><td><strong>${(r.ratio/100).toFixed(2)} s/l</strong></td>`;tbody.appendChild(tr);});}
 function clearRoutes(){comparisonResults=[];updateComparison();document.getElementById('ingredientBox').style.display='none';}
-function showIngredients(r){const box=document.getElementById('ingredientBox');if(!r.recipe.length){box.style.display='none';return;}let html=`<h3>Ingredients for ${r.packName}</h3><ul>`;let total=0;r.recipe.forEach(i=>{const cost=ingredientCosts[i.name]||0;const costCopper=Math.round(cost*100);const subtotal=costCopper*i.qty;total+=subtotal;html+=`<li>${i.qty} × ${i.name} @ ${formatCurrency(costCopper)} = ${formatCurrency(subtotal)}</li>`});html+='</ul><strong>Total Ingredient Cost: '+formatCurrency(total)+'</strong>';box.innerHTML=html;box.style.display='block';}let html=`<h3>Ingredients for ${r.packName}</h3><ul>`;let total=0;r.recipe.forEach(i=>{const cost=ingredientCosts[i.name]||0;const subtotal=cost*i.qty;total+=subtotal;html+=`<li>${i.qty} × ${i.name} @ ${formatCurrency(cost)} = ${formatCurrency(subtotal)}</li>`});html+='</ul><strong>Total Ingredient Cost: '+formatCurrency(total)+'</strong>';box.innerHTML=html;box.style.display='block';}
-document.getElementById('calcBtn').addEventListener('click',()=>calculatePack(true));document.getElementById('addBtn').addEventListener('click',addRoute);document.getElementById('clearBtn').addEventListener('click',clearRoutes);fetchData();
-</script>
-</body>
-</html>
+function showIngredients(r){const box=document.getElementById('ingredientBox');if(!r.recipe.length){box.style.display='none';return;}let html=`<h3>Ingredients for ${r.packName}</h3><ul>`;let total=0;r.recipe.forEach(i=>{const cost=ingredientCosts[i.name]||0;const costCopper=Math.round(cost*100);const subtotal=costCopper*i.qty;total+=subtotal;html+=`<li>${i.qty} × ${i.name} @ ${formatCurrency(costCopper)} = ${formatCurrency(subtotal)}</li>`});html+='</ul><strong>Total Ingredient Cost: '+formatCurrency(total)+'</strong>';box.innerHTML=html;box.style
