@@ -49,6 +49,7 @@
     .header {
         text-align: center;
         margin-bottom: 30px;
+        position: relative;
     }
     .header h1 {
         margin: 0 0 10px 0;
@@ -57,6 +58,25 @@
         font-weight: 700; /* Made bold */
         color: white; /* Changed color to white */
         /* --- END MODIFIED --- */
+    }
+    .header-link {
+        position: absolute;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        color: #64B5F6;
+        text-decoration: none;
+        font-size: 16px;
+        font-weight: 500;
+        padding: 8px 16px;
+        border: 1px solid #64B5F640;
+        border-radius: 6px;
+        background: rgba(100, 181, 246, 0.1);
+        transition: all 0.2s ease;
+    }
+    .header-link:hover {
+        background: rgba(100, 181, 246, 0.2);
+        border-color: #64B5F680;
     }
     .time-display {
         display: flex;
@@ -347,6 +367,13 @@
         .header h1 {
             font-size: 1.5rem;
         }
+        .header-link {
+            position: static;
+            transform: none;
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 14px;
+        }
         th, td {
             padding: 10px 15px;
             font-size: 13px;
@@ -367,6 +394,7 @@
         <div class="info-box"> 
             <div class="header">
                 <h1>Event Schedules</h1>
+                <a href="tradepacks.html" class="header-link">Trade Packs</a>
             </div>
             <div class="time-display">
                 <div class="server-time" id="serverTime"></div>
