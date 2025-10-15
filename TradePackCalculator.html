@@ -58,17 +58,17 @@
         <div class="input-group">
           <label for="proficiencySelect">Proficiency:</label>
           <select id="proficiencySelect">
-            <option value="0">Novice (0%)</option>
-            <option value="5">Veteran (5%)</option>
-            <option value="10">Expert (10%)</option>
-            <option value="15">Master (15%)</option>
-            <option value="20">Authority (20%)</option>
-            <option value="20">Champion (20%)</option>
-            <option value="20">Adept (20%)</option>
-            <option value="20">Herald (20%)</option>
-            <option value="25">Virtuoso (25%)</option>
-            <option value="30">Celebrity (30%)</option>
-            <option value="40">Famed (40%)</option>
+            <option value="0">1. Novice (0%)</option>
+            <option value="5">2. Veteran (5%)</option>
+            <option value="10">3. Expert (10%)</option>
+            <option value="15">4. Master (15%)</option>
+            <option value="20">5. Authority (20%)</option>
+            <option value="20">6. Champion (20%)</option>
+            <option value="20">7. Adept (20%)</option>
+            <option value="20">8. Herald (20%)</option>
+            <option value="25">9. Virtuoso (25%)</option>
+            <option value="30">10. Celebrity (30%)</option>
+            <option value="40">11. Famed (40%)</option>
           </select>
         </div>
       </div>
@@ -100,9 +100,9 @@ const INGREDIENTS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEy
 const RECIPES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=1495951478&single=true&output=csv';
 
 const REGION_ORDER = {
-  'Solis': ["Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Arcum Iris","Solis","Rokhala","Sunbite Wilds"],
-  'Villanelle': ["Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Villanelle","Rokhala","Sunbite Wilds","Ynystere"],
-  'Ynystere': ["Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Hasla","Ynystere","Rokhala","Sunbite Wilds",""]
+  'Solis': ["Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Windscour","Perinoor","Rookborne","Ynystere","Hasla","Arcum Iris","Solis","Rokhala","Sunbite Wilds"],
+  'Villanelle': ["Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Windscour","Perinoor","Rookborne","Ynystere","Hasla","Villanelle","Rokhala","Sunbite Wilds","Ynystere"],
+  'Ynystere': ["Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Windscour","Perinoor","Rookborne","Hasla","Ynystere","Rokhala","Sunbite Wilds",""]
 };
 
 const REGION_FRESHNESS = {
@@ -113,13 +113,12 @@ const REGION_FRESHNESS = {
   'Perinoor': 'Preserved',
   'Rokhala': 'Preserved',
   'Rookborne': 'Preserved',
-  'Savannah': 'Preserved',
+  'Windscour': 'Preserved',
   'Silent Forest': 'Commercial',
   'Solis': 'Luxury',
   'Sunbite Wilds': 'Commercial',
   'Tigerspine': 'Fine',
   'Villanelle': 'Luxury',
-  'Windscour': 'Preserved',
   'Ynystere': 'Commercial'
 };
 
