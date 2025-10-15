@@ -228,8 +228,20 @@ function calculatePack(showDetails){
   const entry = packData.find(p=>p.origin===origin && p.packName===packName && p.to===to);
   if(!entry){ if(showDetails) showError('No pack data for that route'); return null; }
 
+  // DEBUG: Log the values
+  console.log('Pack:', packName);
+  console.log('Base Copper:', entry.baseCopper);
+  console.log('Demand:', demandPct);
+  
   // base copper value from sheet
   let baseCopper = entry.baseCopper; // copper
+  
+  // Check if baseCopper is 0
+  if(baseCopper === 0){
+    if(showDetails) showError('No base value found for this pack route in the spreadsheet');
+    return null;
+  }
+  
   // apply interest 2% and demand and freshness
   const demand = demandPct / 100;
   const freshnessBonus = getFreshnessBonus(packName);
@@ -238,6 +250,9 @@ function calculatePack(showDetails){
   if(premium) valueGold *= 1.05;
   if(war && to === 'Ynystere') valueGold *= 1.15;
   const turnInCopper = Math.round(valueGold * 10000);
+  
+  console.log('Freshness Bonus:', freshnessBonus);
+  console.log('Turn-in Copper:', turnInCopper);
 
   // ingredient cost
   let ingredientCopper = 0;
