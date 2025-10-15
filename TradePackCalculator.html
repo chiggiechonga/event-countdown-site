@@ -197,6 +197,15 @@ function updateWarCheckbox(){
   if(to === 'Ynystere') warContainer.style.display = 'flex'; else { warContainer.style.display = 'none'; document.getElementById('warCheck').checked = false; }
 }
 
+function getFreshnessBonus(packName) {
+  const name = packName.toLowerCase();
+  if (name.includes("luxury")) return 1.30;
+  if (name.includes("fine")) return 1.15;
+  if (name.includes("commercial")) return 1.05;
+  if (name.includes("preserved")) return 1.03;
+  return 1.00;
+}
+
 function copperToGSC(copper){
   const neg = copper < 0; if(neg) copper = Math.abs(copper);
   const g = Math.floor(copper / 10000);
@@ -224,8 +233,8 @@ function calculatePack(showDetails){
   // apply interest 2% and demand and freshness
   const demand = demandPct / 100;
   const freshnessBonus = getFreshnessBonus(packName);
-  let valueGold = (baseCopper / 10000) / 1; // convert to gold float
-  valueGold = valueGold * 1.02 * demand * (1 + freshnessBonus);
+  let valueGold = baseCopper / 10000;
+  valueGold = valueGold * 1.02 * demand * freshnessBonus;
   if(premium) valueGold *= 1.05;
   if(war && to === 'Ynystere') valueGold *= 1.15;
   const turnInCopper = Math.round(valueGold * 10000);
