@@ -79,45 +79,16 @@
   </div>
 
 <script>
-// Config
 const PACKS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=776663831&single=true&output=csv';
 const INGREDIENTS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=681613255&single=true&output=csv';
 const RECIPES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0qhz-s51VwX9-iblXZLgf5KQw2IhQxcpiM2FgjRaU2qPodYwpXIGixcEwQCWqw-rzqN2Zk/pub?gid=1495951478&single=true&output=csv';
 
-// Region orders you provided
 const REGION_ORDER = {
   'Solis': ["Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Arcum Iris","Solis","Rokhala","Sunbite Wilds"],
   'Villanelle': ["Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Villanelle","Rokhala","Sunbite Wilds"],
   'Ynystere': ["Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Hasla","Ynystere","Rokhala","Sunbite Wilds"]
 };
 
-const ORIGINS = Array.from(new Set(Object.values(REGION_ORDER).flat())).sort((a,b)=>a.localeCompare(b));
-const DESTINATIONS = ['Solis','Villanelle','Ynystere'];
-
-// Data stores
-let packData = []; // entries: { origin, packName, to, baseCopper }
-let ingredientCosts = {}; // name -> silver (as float) e.g. 4.67 = 4s67c
-let packRecipes = {}; // packName -> [{name, qty}, ...]
-let comparisonResults = [];
-
-// CSV parser (handles quoted values)
-function parseCSV(text){
-  const rows=[];
-  let cur=[]; let token=''; let inQuotes=false;
-  for(let i=0;i<text.length;i++){
-    const ch=text[i];
-    if(ch==='"'){ inQuotes=!inQuotes; continue; }
-    if(ch===',' && !inQuotes){ cur.push(token.trim()); token=''; continue; }
-    if((ch==='\n' || ch==='\r') && !inQuotes){ if(token!=='' || cur.length>0){ cur.push(token.trim()); rows.push(cur); } token=''; cur=[]; if(text[i+1]==='\n') i++; continue; }
-    token+=ch;
-  }
-  if(token!=='' || cur.length>0){ cur.push(token.trim()); rows.push(cur); }
-  return rows.map(r=>r.map(cell=>cell===undefined? '': cell));
-}
-
-function showError(msg){alert(msg);} // simple
-
-// Map regions to their freshness quality
 const REGION_FRESHNESS = {
   'Arcum Iris': 'Commercial',
   'Falcorth': 'Fine',
@@ -136,30 +107,46 @@ const REGION_FRESHNESS = {
   'Ynystere': 'Commercial'
 };
 
-// Build packs using REGION_ORDER mapping and sheet layout you described
+const DESTINATIONS = ['Solis','Villanelle','Ynystere'];
+
+let packData = [];
+let ingredientCosts = {};
+let packRecipes = {};
+let comparisonResults = [];
+
+function parseCSV(text){
+  const rows=[];
+  let cur=[]; let token=''; let inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(ch==='"'){ inQuotes=!inQuotes; continue; }
+    if(ch===',' && !inQuotes){ cur.push(token.trim()); token=''; continue; }
+    if((ch==='\n' || ch==='\r') && !inQuotes){ if(token!=='' || cur.length>0){ cur.push(token.trim()); rows.push(cur); } token=''; cur=[]; if(text[i+1]==='\n') i++; continue; }
+    token+=ch;
+  }
+  if(token!=='' || cur.length>0){ cur.push(token.trim()); rows.push(cur); }
+  return rows.map(r=>r.map(cell=>cell===undefined? '': cell));
+}
+
+function showError(msg){alert(msg);}
+
 function buildPackDataFromSheet(rows){
   packData = [];
-  // find header rows where A == 'Solis'/'Villanelle'/'Ynystere' (case-insensitive)
   for(const dest of Object.keys(REGION_ORDER)){
     let headerIndex = rows.findIndex(r=> (r[0]||'').toLowerCase() === dest.toLowerCase());
     if(headerIndex === -1) continue;
-    // data rows start at headerIndex + 2 (skip blank/header row)
     const start = headerIndex + 2;
-    const expected = REGION_ORDER[dest].length; // 14
+    const expected = REGION_ORDER[dest].length;
     for(let i=0;i<expected;i++){
       const row = rows[start + i] || [];
       const origin = REGION_ORDER[dest][i];
       const freshness = REGION_FRESHNESS[origin] || '';
-      // columns B..E are indices 1..4
       const types = ['Speciality','Gilda Specialty','Local Specialty','Fertilizer Specialty'];
       for(let c=1;c<=4;c++){
         const raw = (row[c]||'').trim();
-        // allow empty values
         const gold = raw === '' ? 0 : parseFloat(raw.replace(/[^0-9.\-]/g,'')) || 0;
-        // gold -> copper (1 gold = 10000 copper)
         const copper = Math.round(gold * 10000);
-        const packName = `${origin} ${freshness} ${types[c-1]}`;
-        // skip self-turnins (origin == dest)
+        const packName = origin + ' ' + freshness + ' ' + types[c-1];
         if(origin.toLowerCase() === dest.toLowerCase()) continue;
         packData.push({ origin, packName, to: dest, baseCopper: copper });
       }
@@ -174,9 +161,8 @@ function buildIngredientsFromSheet(rows){
     if(!name) return;
     const raw = (r[1]||'').trim();
     if(raw === ''){ ingredientCosts[name] = 0; return; }
-    // assume ingredient sheet values are in silver format (e.g., 4.67 for 4s67c)
     const val = parseFloat(raw.replace(/[^0-9.\-]/g,'')) || 0;
-    ingredientCosts[name] = val; // silver float
+    ingredientCosts[name] = val;
   });
 }
 
@@ -197,7 +183,7 @@ function buildRecipesFromSheet(rows){
 
 function sortAndPopulateFrom(){
   const fromSel = document.getElementById('fromSelect');
-  fromSel.innerHTML = '<option value=""></option>'; // blank default
+  fromSel.innerHTML = '<option value=""></option>';
   const origins = Array.from(new Set(packData.map(p=>p.origin))).sort((a,b)=>a.localeCompare(b));
   origins.forEach(o=> fromSel.add(new Option(o,o)));
 }
@@ -231,7 +217,7 @@ function copperToGSC(copper){
   const g = Math.floor(copper / 10000);
   const s = Math.floor((copper % 10000) / 100);
   const c = Math.floor(copper % 100);
-  return (neg?'-':'') + `${g}g ${s}s ${c}c`;
+  return (neg?'-':'') + g + 'g ' + s + 's ' + c + 'c';
 }
 
 function calculatePack(showDetails){
@@ -248,45 +234,47 @@ function calculatePack(showDetails){
   const entry = packData.find(p=>p.origin===origin && p.packName===packName && p.to===to);
   if(!entry){ if(showDetails) showError('No pack data for that route'); return null; }
 
-  // DEBUG: Log the values
   console.log('Pack:', packName);
   console.log('Base Copper:', entry.baseCopper);
   console.log('Demand:', demandPct);
   
-  // base copper value from sheet
-  let baseCopper = entry.baseCopper; // copper
+  let baseCopper = entry.baseCopper;
   
-  // Check if baseCopper is 0
   if(baseCopper === 0){
     if(showDetails) showError('No base value found for this pack route in the spreadsheet');
     return null;
   }
   
- * demand * freshnessBonus;
+  const demand = demandPct / 100;
+  const freshnessBonus = getFreshnessBonus(packName);
+  let valueGold = baseCopper / 10000;
+  
+  if(war && to === 'Ynystere') {
+    valueGold = valueGold * 1.15;
+  }
+  
+  valueGold = valueGold * 1.02 * demand * freshnessBonus;
   if(premium) valueGold *= 1.05;
-  if(war && to === 'Ynystere') valueGold *= 1.15;
   const turnInCopper = Math.round(valueGold * 10000);
   
   console.log('Freshness Bonus:', freshnessBonus);
   console.log('Turn-in Copper:', turnInCopper);
 
-  // ingredient cost
   let ingredientCopper = 0;
   const recipe = packRecipes[packName] || [];
   if(!own){
     recipe.forEach(i=>{
-      const costSilver = ingredientCosts[i.name] || 0; // silver float
+      const costSilver = ingredientCosts[i.name] || 0;
       const costCopperPerUnit = Math.round(costSilver * 100);
       ingredientCopper += costCopperPerUnit * i.qty;
     });
   }
 
-  // crafting cost (silver) - simple fixed 50s unless own materials
   const craftingSilver = own ? 0 : 50;
   const craftingCopper = craftingSilver * 100;
 
   const profitCopper = turnInCopper - ingredientCopper - craftingCopper;
-  const labor = 125; // simplified
+  const labor = 125;
   const sPerL = profitCopper / labor;
 
   const result = { origin, packName, to, demand: (demandPct)+'%', profitCopper, labor, sPerL, recipe, ingredientCopper };
@@ -298,7 +286,7 @@ function displaySingleResult(r){
   const tbody = document.getElementById('resultsBody');
   tbody.innerHTML = '';
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td>${r.origin}</td><td>${r.packName}</td><td>${r.to}</td><td>${r.demand}</td><td>${copperToGSC(r.profitCopper)}</td><td>${r.labor}</td><td><strong>${(r.sPerL/100).toFixed(2)} s/l</strong></td>`;
+  tr.innerHTML = '<td>' + r.origin + '</td><td>' + r.packName + '</td><td>' + r.to + '</td><td>' + r.demand + '</td><td>' + copperToGSC(r.profitCopper) + '</td><td>' + r.labor + '</td><td><strong>' + (r.sPerL/100).toFixed(2) + ' s/l</strong></td>';
   tbody.appendChild(tr);
   showIngredientBox(r);
 }
@@ -306,7 +294,8 @@ function displaySingleResult(r){
 function showIngredientBox(r){
   const box = document.getElementById('ingredientBox');
   if(!r.recipe || r.recipe.length===0){ box.style.display='none'; return; }
-  let total = 0; let html = `<h3>Ingredients for ${r.packName}</h3><ul>`;
+  let total = 0;
+  let html = '<h3>Ingredients for ' + r.packName + '</h3><ul>';
   r.recipe.forEach(i=>{
     const costSilver = ingredientCosts[i.name] || 0;
     const costCopperPerUnit = Math.round(costSilver * 100);
@@ -315,7 +304,8 @@ function showIngredientBox(r){
     html += '<li>' + i.qty + ' x ' + i.name + ' @ ' + copperToGSC(costCopperPerUnit) + ' = ' + copperToGSC(subtotal) + '</li>';
   });
   html += '</ul><strong>Total Ingredient Cost: ' + copperToGSC(total) + '</strong>';
-  box.innerHTML = html; box.style.display = 'block';
+  box.innerHTML = html;
+  box.style.display = 'block';
 }
 
 function addRoute(){
@@ -330,7 +320,7 @@ function updateComparisonTable(){
   tbody.innerHTML = '';
   comparisonResults.forEach(r=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.origin}</td><td>${r.packName}</td><td>${r.to}</td><td>${r.demand}</td><td>${copperToGSC(r.profitCopper)}</td><td>${r.labor}</td><td><strong>${(r.sPerL/100).toFixed(2)} s/l</strong></td>`;
+    tr.innerHTML = '<td>' + r.origin + '</td><td>' + r.packName + '</td><td>' + r.to + '</td><td>' + r.demand + '</td><td>' + copperToGSC(r.profitCopper) + '</td><td>' + r.labor + '</td><td><strong>' + (r.sPerL/100).toFixed(2) + ' s/l</strong></td>';
     tbody.appendChild(tr);
   });
   if(comparisonResults.length>0){ showIngredientBox(comparisonResults[comparisonResults.length-1]); }
@@ -338,20 +328,20 @@ function updateComparisonTable(){
 
 function clearRoutes(){ comparisonResults=[]; updateComparisonTable(); document.getElementById('ingredientBox').style.display='none'; }
 
-// attach UI event listeners immediately so buttons work even if fetch fails
 try{
   document.getElementById('fromSelect').addEventListener('change', updatePackDropdown);
   document.getElementById('toSelect').addEventListener('change', updateWarCheckbox);
-  document.getElementById('calcBtn').addEventListener('click', ()=>{ const res = calculatePack(true); if(!res) {/* silent */} });
-  document.getElementById('addBtn').addEventListener('click', ()=>{ if(packData.length===0){ showError('Data not loaded yet. Please wait or host the page'); return; } addRoute(); });
+  document.getElementById('calcBtn').addEventListener('click', function(){ const res = calculatePack(true); if(!res) {} });
+  document.getElementById('addBtn').addEventListener('click', function(){ if(packData.length===0){ showError('Data not loaded yet. Please wait or host the page'); return; } addRoute(); });
   document.getElementById('clearBtn').addEventListener('click', clearRoutes);
-}catch(e){ /* elements may not exist yet in rare cases; will attach in init as fallback */ }
+}catch(e){}
 
-// Initialization: fetch sheets and build data
 async function fetchText(url){ const res = await fetch(url); if(!res.ok) throw new Error('HTTP '+res.status); return await res.text(); }
 async function init(){
   try{
-    const [pText, iText, rText] = await Promise.all([fetchText(PACKS_URL), fetchText(INGREDIENTS_URL), fetchText(RECIPES_URL)]);
+    const pText = await fetchText(PACKS_URL);
+    const iText = await fetchText(INGREDIENTS_URL);
+    const rText = await fetchText(RECIPES_URL);
     const pRows = parseCSV(pText);
     const iRows = parseCSV(iText);
     const rRows = parseCSV(rText);
@@ -359,13 +349,13 @@ async function init(){
     buildIngredientsFromSheet(iRows);
     buildRecipesFromSheet(rRows);
     sortAndPopulateFrom();
-    // populate To dropdown blank + options
-    const toSel = document.getElementById('toSelect'); toSel.innerHTML = '<option value=""></option>'; DESTINATIONS.forEach(d=> toSel.add(new Option(d,d)));
-    // wire events in case previous attach failed
+    const toSel = document.getElementById('toSelect');
+    toSel.innerHTML = '<option value=""></option>';
+    DESTINATIONS.forEach(d=> toSel.add(new Option(d,d)));
     try{
       document.getElementById('fromSelect').addEventListener('change', updatePackDropdown);
       document.getElementById('toSelect').addEventListener('change', updateWarCheckbox);
-      document.getElementById('calcBtn').addEventListener('click', ()=>calculatePack(true));
+      document.getElementById('calcBtn').addEventListener('click', function(){calculatePack(true)});
       document.getElementById('addBtn').addEventListener('click', addRoute);
       document.getElementById('clearBtn').addEventListener('click', clearRoutes);
     }catch(e){console.warn('Could not attach event listeners in init', e)}
