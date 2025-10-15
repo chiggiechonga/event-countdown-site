@@ -85,8 +85,8 @@ const RECIPES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0q
 
 const REGION_ORDER = {
   'Solis': ["Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Arcum Iris","Solis","Rokhala","Sunbite Wilds"],
-  'Villanelle': ["Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Villanelle","Rokhala","Sunbite Wilds"],
-  'Ynystere': ["Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Hasla","Ynystere","Rokhala","Sunbite Wilds"]
+  'Villanelle': ["Perinoor","Rookborne","Ynystere","Hasla","Arcum Iris","Solis","Rokhala","Sunbite Wilds","Villanelle","","Solis","Arcum Iris","Mahadevi","Falcorth"],
+  'Ynystere': ["Arcum Iris","Solis","Rokhala","Sunbite Wilds","Villanelle","","Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Savannah","Perinoor"]
 };
 
 const REGION_FRESHNESS = {
@@ -291,6 +291,11 @@ function calculatePack(showDetails){
   const profitCopper = turnInCopper - ingredientCopper - craftingCopper;
   const labor = 125;
   const sPerL = profitCopper / labor;
+  
+  console.log('Turn-in value:', turnInCopper);
+  console.log('Ingredient cost:', ingredientCopper);
+  console.log('Crafting cost:', craftingCopper);
+  console.log('Profit:', profitCopper);
 
   const result = { origin, packName, to, demand: (demandPct)+'%', profitCopper, labor, sPerL, recipe, ingredientCopper };
   if(showDetails) displaySingleResult(result);
