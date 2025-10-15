@@ -85,8 +85,8 @@ const RECIPES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0q
 
 const REGION_ORDER = {
   'Solis': ["Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Arcum Iris","Solis","Rokhala","Sunbite Wilds"],
-  'Villanelle': ["Perinoor","Rookborne","Ynystere","Hasla","Arcum Iris","Solis","Rokhala","Sunbite Wilds","Villanelle","","Solis","Arcum Iris","Mahadevi","Falcorth"],
-  'Ynystere': ["Arcum Iris","Solis","Rokhala","Sunbite Wilds","Villanelle","","Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Savannah","Perinoor"]
+  'Villanelle': ["Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Villanelle","Rokhala","Sunbite Wilds"],
+  'Ynystere': ["Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Hasla","Ynystere","Rokhala","Sunbite Wilds"]
 };
 
 const REGION_FRESHNESS = {
@@ -306,6 +306,7 @@ function displaySingleResult(r){
   const tbody = document.getElementById('resultsBody');
   tbody.innerHTML = '';
   const tr = document.createElement('tr');
+  console.log('Displaying result - Profit Copper:', r.profitCopper);
   tr.innerHTML = '<td>' + r.origin + '</td><td>' + r.packName + '</td><td>' + r.to + '</td><td>' + r.demand + '</td><td>' + copperToGSC(r.profitCopper) + '</td><td>' + r.labor + '</td><td><strong>' + (r.sPerL/100).toFixed(2) + ' s/l</strong></td>';
   tbody.appendChild(tr);
   showIngredientBox(r);
