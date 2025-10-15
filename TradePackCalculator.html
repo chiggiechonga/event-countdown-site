@@ -117,6 +117,25 @@ function parseCSV(text){
 
 function showError(msg){alert(msg);} // simple
 
+// Map regions to their freshness quality
+const REGION_FRESHNESS = {
+  'Arcum Iris': 'Commercial',
+  'Falcorth': 'Fine',
+  'Hasla': 'Preserved',
+  'Mahadevi': 'Fine',
+  'Perinoor': 'Preserved',
+  'Rokhala': 'Preserved',
+  'Rookborne': 'Preserved',
+  'Savannah': 'Preserved',
+  'Silent Forest': 'Commercial',
+  'Solis': 'Luxury',
+  'Sunbite Wilds': 'Commercial',
+  'Tigerspine': 'Fine',
+  'Villanelle': 'Luxury',
+  'Windscour': 'Preserved',
+  'Ynystere': 'Commercial'
+};
+
 // Build packs using REGION_ORDER mapping and sheet layout you described
 function buildPackDataFromSheet(rows){
   packData = [];
@@ -130,15 +149,16 @@ function buildPackDataFromSheet(rows){
     for(let i=0;i<expected;i++){
       const row = rows[start + i] || [];
       const origin = REGION_ORDER[dest][i];
+      const freshness = REGION_FRESHNESS[origin] || '';
       // columns B..E are indices 1..4
-      const types = ['Specialty','Gilda Specialty','Local Specialty','Fertilizer Pack'];
+      const types = ['Speciality','Gilda Specialty','Local Specialty','Fertilizer Specialty'];
       for(let c=1;c<=4;c++){
         const raw = (row[c]||'').trim();
         // allow empty values
         const gold = raw === '' ? 0 : parseFloat(raw.replace(/[^0-9.\-]/g,'')) || 0;
         // gold -> copper (1 gold = 10000 copper)
         const copper = Math.round(gold * 10000);
-        const packName = `${origin} ${types[c-1]}`;
+        const packName = `${origin} ${freshness} ${types[c-1]}`;
         // skip self-turnins (origin == dest)
         if(origin.toLowerCase() === dest.toLowerCase()) continue;
         packData.push({ origin, packName, to: dest, baseCopper: copper });
@@ -242,11 +262,7 @@ function calculatePack(showDetails){
     return null;
   }
   
-  // apply interest 2% and demand and freshness
-  const demand = demandPct / 100;
-  const freshnessBonus = getFreshnessBonus(packName);
-  let valueGold = baseCopper / 10000;
-  valueGold = valueGold * 1.02 * demand * freshnessBonus;
+ * demand * freshnessBonus;
   if(premium) valueGold *= 1.05;
   if(war && to === 'Ynystere') valueGold *= 1.15;
   const turnInCopper = Math.round(valueGold * 10000);
