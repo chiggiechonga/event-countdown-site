@@ -135,6 +135,7 @@ function buildPackDataFromSheet(rows){
   for(const dest of Object.keys(REGION_ORDER)){
     let headerIndex = rows.findIndex(r=> (r[0]||'').toLowerCase() === dest.toLowerCase());
     if(headerIndex === -1) continue;
+    console.log('Found ' + dest + ' header at row ' + headerIndex);
     const start = headerIndex + 2;
     const expected = REGION_ORDER[dest].length;
     for(let i=0;i<expected;i++){
@@ -142,6 +143,7 @@ function buildPackDataFromSheet(rows){
       const origin = REGION_ORDER[dest][i];
       const freshness = REGION_FRESHNESS[origin] || '';
       const types = ['Speciality','Gilda Specialty','Local Specialty','Fertilizer Specialty'];
+      console.log('Row ' + (start + i) + ': Expected=' + origin + ', Actual cell A=' + (row[0]||'empty'));
       for(let c=1;c<=4;c++){
         const raw = (row[c]||'').trim();
         const gold = raw === '' ? 0 : parseFloat(raw.replace(/[^0-9.\-]/g,'')) || 0;
