@@ -36,6 +36,8 @@
   .results-table tbody tr:hover{background:#2a2a2a}
   .ingredient-box{background:rgba(0,0,0,0.6);border:1px solid #444;border-radius:8px;padding:15px;margin-top:15px}
   .ingredient-box h3{color:#FDD835;margin-top:0;font-size:16px}
+  .map-container{margin-top:25px;text-align:center}
+  .map-image{max-width:100%;height:auto;border-radius:12px;box-shadow:0 0 30px rgba(0,0,0,0.8),0 0 60px rgba(100,181,246,0.3),0 0 90px rgba(100,181,246,0.2);border:2px solid #546E7A}
   @media (max-width:768px){.input-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -91,6 +93,10 @@
       </table>
 
       <div id="ingredientBox" class="ingredient-box" style="display:none"></div>
+      
+      <div class="map-container">
+        <img src="https://i.imgur.com/nRPX564.png" alt="Trade Routes Map" class="map-image">
+      </div>
     </div>
   </div>
 
