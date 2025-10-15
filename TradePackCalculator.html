@@ -161,8 +161,13 @@ function buildIngredientsFromSheet(rows){
     if(!name) return;
     const raw = (r[1]||'').trim();
     if(raw === ''){ ingredientCosts[name] = 0; return; }
-    const val = parseFloat(raw.replace(/[^0-9.\-]/g,'')) || 0;
-    ingredientCosts[name] = val;
+    const val = parseFloat(raw) || 0;
+    const gold = Math.floor(val);
+    const remaining = val - gold;
+    const silver = Math.floor(remaining * 100);
+    const copper = Math.round((remaining * 100 - silver) * 100);
+    const totalCopper = (gold * 10000) + (silver * 100) + copper;
+    ingredientCosts[name] = totalCopper;
   });
 }
 
@@ -213,11 +218,16 @@ function getFreshnessBonus(packName) {
 }
 
 function copperToGSC(copper){
-  const neg = copper < 0; if(neg) copper = Math.abs(copper);
+  const neg = copper < 0;
+  if(neg) copper = Math.abs(copper);
   const g = Math.floor(copper / 10000);
   const s = Math.floor((copper % 10000) / 100);
   const c = Math.floor(copper % 100);
-  return (neg?'-':'') + g + 'g ' + s + 's ' + c + 'c';
+  let result = '';
+  if(g > 0) result += g + 'g ';
+  if(s > 0 || g > 0) result += s + 's ';
+  result += c + 'c';
+  return (neg ? '-' : '') + result.trim();
 }
 
 function calculatePack(showDetails){
@@ -241,7 +251,11 @@ function calculatePack(showDetails){
   let baseCopper = entry.baseCopper;
   
   if(baseCopper === 0){
-    if(showDetails) showError('No base value found for this pack route in the spreadsheet');
+    console.log('Available routes for ' + origin + ':');
+    packData.filter(p => p.origin === origin && p.to === to).forEach(p => {
+      console.log('  - ' + p.packName + ': ' + p.baseCopper);
+    });
+    if(showDetails) showError('No base value found for this pack route in the spreadsheet. Check console for available routes.');
     return null;
   }
   
@@ -264,8 +278,7 @@ function calculatePack(showDetails){
   const recipe = packRecipes[packName] || [];
   if(!own){
     recipe.forEach(i=>{
-      const costSilver = ingredientCosts[i.name] || 0;
-      const costCopperPerUnit = Math.round(costSilver * 100);
+      const costCopperPerUnit = ingredientCosts[i.name] || 0;
       ingredientCopper += costCopperPerUnit * i.qty;
     });
   }
@@ -297,11 +310,10 @@ function showIngredientBox(r){
   let total = 0;
   let html = '<h3>Ingredients for ' + r.packName + '</h3><ul>';
   r.recipe.forEach(i=>{
-    const costSilver = ingredientCosts[i.name] || 0;
-    const costCopperPerUnit = Math.round(costSilver * 100);
+    const costCopperPerUnit = ingredientCosts[i.name] || 0;
     const subtotal = costCopperPerUnit * i.qty;
     total += subtotal;
-    html += '<li>' + i.qty + ' x ' + i.name + ' @ ' + copperToGSC(costCopperPerUnit) + ' = ' + copperToGSC(subtotal) + '</li>';
+    html += '<li>x' + i.qty + ' ' + i.name + ' @ ' + copperToGSC(costCopperPerUnit) + ' = ' + copperToGSC(subtotal) + '</li>';
   });
   html += '</ul><strong>Total Ingredient Cost: ' + copperToGSC(total) + '</strong>';
   box.innerHTML = html;
@@ -318,6 +330,10 @@ function addRoute(){
 function updateComparisonTable(){
   const tbody = document.getElementById('resultsBody');
   tbody.innerHTML = '';
+  if(comparisonResults.length === 0){
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888">No routes calculated yet.</td></tr>';
+    return;
+  }
   comparisonResults.forEach(r=>{
     const tr = document.createElement('tr');
     tr.innerHTML = '<td>' + r.origin + '</td><td>' + r.packName + '</td><td>' + r.to + '</td><td>' + r.demand + '</td><td>' + copperToGSC(r.profitCopper) + '</td><td>' + r.labor + '</td><td><strong>' + (r.sPerL/100).toFixed(2) + ' s/l</strong></td>';
