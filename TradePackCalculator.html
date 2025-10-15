@@ -312,7 +312,7 @@ function showIngredientBox(r){
     const costCopperPerUnit = Math.round(costSilver * 100);
     const subtotal = costCopperPerUnit * i.qty;
     total += subtotal;
-    html += `<li>${i.qty} × ${i.name} @ ${copperToGSC(costCopperPerUnit)} = ${copperToGSC(subtotal)}</li>`;
+    html += `<li>${i.qty} x ${i.name} @ ${copperToGSC(costCopperPerUnit)} = ${copperToGSC(subtotal)}</li>`;
   });
   html += `</ul><strong>Total Ingredient Cost: ${copperToGSC(total)}</strong>`;
   box.innerHTML = html; box.style.display = 'block';
