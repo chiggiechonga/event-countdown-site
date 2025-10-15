@@ -265,14 +265,17 @@ function calculatePack(showDetails){
     return null;
   }
   
-  const demand = demandPct / 100;
+  // Spreadsheet values are at 130% demand, so we need to adjust to actual demand
+  const baseDemandPct = 130;
+  const demand = demandPct / baseDemandPct;
   let valueGold = baseCopper / 10000;
   
   if(war && to === 'Ynystere') {
     valueGold = valueGold * 1.15;
   }
   
-  valueGold = valueGold * 1.02 * demand;
+  // Apply demand adjustment (from base 130% to actual %) and premium
+  valueGold = valueGold * demand;
   if(premium) valueGold *= 1.05;
   const turnInCopper = Math.round(valueGold * 10000);
 
@@ -293,6 +296,14 @@ function calculatePack(showDetails){
   const proficiencyReduction = Math.floor(baseLaborCost * (proficiencyPct / 100));
   const labor = 60 + 65 - proficiencyReduction;
   const sPerL = profitCopper / labor;
+  
+  console.log('=== Calculation Breakdown ===');
+  console.log('Base from sheet:', baseCopper, 'copper');
+  console.log('Turn-in value:', turnInCopper, 'copper =', copperToGSC(turnInCopper));
+  console.log('Ingredient cost:', ingredientCopper, 'copper =', copperToGSC(ingredientCopper));
+  console.log('Crafting cost:', craftingCopper, 'copper =', copperToGSC(craftingCopper));
+  console.log('PROFIT:', profitCopper, 'copper =', copperToGSC(profitCopper));
+  console.log('Labor:', labor, '| S/L:', (sPerL/100).toFixed(2));
 
   const result = { origin, packName, to, demand: (demandPct)+'%', profitCopper, labor, sPerL, recipe, ingredientCopper };
   if(showDetails) displaySingleResult(result);
