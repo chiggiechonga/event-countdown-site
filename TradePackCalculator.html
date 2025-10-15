@@ -101,8 +101,8 @@ const RECIPES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHHKEyiE0q
 
 const REGION_ORDER = {
   'Solis': ["Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Arcum Iris","Solis","Rokhala","Sunbite Wilds"],
-  'Villanelle': ["Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Villanelle","Rokhala","Sunbite Wilds"],
-  'Ynystere': ["Solis","Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Hasla","Ynystere","Rokhala","Sunbite Wilds"]
+  'Villanelle': ["Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Savannah","Perinoor","Rookborne","Ynystere","Hasla","Villanelle","Rokhala","Sunbite Wilds","Ynystere"],
+  'Ynystere': ["Arcum Iris","Mahadevi","Falcorth","Tigerspine","Silent Forest","Villanelle","Savannah","Perinoor","Rookborne","Hasla","Ynystere","Rokhala","Sunbite Wilds",""]
 };
 
 const REGION_FRESHNESS = {
@@ -156,15 +156,14 @@ function buildPackDataFromSheet(rows){
   
   for(const dest of Object.keys(REGION_ORDER)){
     const headerIndex = destRows[dest];
-    console.log('Using ' + dest + ' header at row ' + headerIndex);
     const start = headerIndex + 2;
     const expected = REGION_ORDER[dest].length;
     for(let i=0;i<expected;i++){
       const row = rows[start + i] || [];
       const origin = REGION_ORDER[dest][i];
+      if(!origin) continue;
       const freshness = REGION_FRESHNESS[origin] || '';
       const types = ['Speciality','Gilda Specialty','Local Specialty','Fertilizer Specialty'];
-      console.log('Row ' + (start + i) + ': Expected=' + origin + ', Actual cell A=' + (row[0]||'empty'));
       for(let c=1;c<=4;c++){
         const raw = (row[c]||'').trim();
         const gold = raw === '' ? 0 : parseFloat(raw.replace(/[^0-9.\-]/g,'')) || 0;
@@ -231,15 +230,6 @@ function updateWarCheckbox(){
   if(to === 'Ynystere') warContainer.style.display = 'flex'; else { warContainer.style.display = 'none'; document.getElementById('warCheck').checked = false; }
 }
 
-function getFreshnessBonus(packName) {
-  const name = packName.toLowerCase();
-  if (name.includes("luxury")) return 1.30;
-  if (name.includes("fine")) return 1.15;
-  if (name.includes("commercial")) return 1.05;
-  if (name.includes("preserved")) return 1.03;
-  return 1.00;
-}
-
 function copperToGSC(copper){
   const neg = copper < 0;
   if(neg) copper = Math.abs(copper);
@@ -258,7 +248,7 @@ function calculatePack(showDetails){
   const packName = document.getElementById('packSelect').value;
   const to = document.getElementById('toSelect').value;
   const demandPct = parseFloat(document.getElementById('demandInput').value) || 130;
-  const proficiencyPct = parseFloat(document.getElementById('proficiencyInput').value) || 0;
+  const proficiencyPct = parseFloat(document.getElementById('proficiencySelect').value) || 0;
   const premium = document.getElementById('premiumCheck').checked;
   const own = document.getElementById('supplyOwnCheck').checked;
   const war = document.getElementById('warCheck') ? document.getElementById('warCheck').checked : false;
@@ -268,35 +258,23 @@ function calculatePack(showDetails){
   const entry = packData.find(p=>p.origin===origin && p.packName===packName && p.to===to);
   if(!entry){ if(showDetails) showError('No pack data for that route'); return null; }
 
-  console.log('Pack:', packName);
-  console.log('Base Copper:', entry.baseCopper);
-  console.log('Demand:', demandPct);
-  
   let baseCopper = entry.baseCopper;
   
   if(baseCopper === 0){
-    console.log('Available routes for ' + origin + ':');
-    packData.filter(p => p.origin === origin && p.to === to).forEach(p => {
-      console.log('  - ' + p.packName + ': ' + p.baseCopper);
-    });
-    if(showDetails) showError('No base value found for this pack route in the spreadsheet. Check console for available routes.');
+    if(showDetails) showError('No base value found for this pack route in the spreadsheet.');
     return null;
   }
   
   const demand = demandPct / 100;
-  const freshnessBonus = getFreshnessBonus(packName);
   let valueGold = baseCopper / 10000;
   
   if(war && to === 'Ynystere') {
     valueGold = valueGold * 1.15;
   }
   
-  valueGold = valueGold * 1.02 * demand * freshnessBonus;
+  valueGold = valueGold * 1.02 * demand;
   if(premium) valueGold *= 1.05;
   const turnInCopper = Math.round(valueGold * 10000);
-  
-  console.log('Freshness Bonus:', freshnessBonus);
-  console.log('Turn-in Copper:', turnInCopper);
 
   let ingredientCopper = 0;
   const recipe = packRecipes[packName] || [];
@@ -315,11 +293,6 @@ function calculatePack(showDetails){
   const proficiencyReduction = Math.floor(baseLaborCost * (proficiencyPct / 100));
   const labor = 60 + 65 - proficiencyReduction;
   const sPerL = profitCopper / labor;
-  
-  console.log('Turn-in value:', turnInCopper);
-  console.log('Ingredient cost:', ingredientCopper);
-  console.log('Crafting cost:', craftingCopper);
-  console.log('Profit:', profitCopper);
 
   const result = { origin, packName, to, demand: (demandPct)+'%', profitCopper, labor, sPerL, recipe, ingredientCopper };
   if(showDetails) displaySingleResult(result);
@@ -330,7 +303,6 @@ function displaySingleResult(r){
   const tbody = document.getElementById('resultsBody');
   tbody.innerHTML = '';
   const tr = document.createElement('tr');
-  console.log('Displaying result - Profit Copper:', r.profitCopper);
   tr.innerHTML = '<td>' + r.origin + '</td><td>' + r.packName + '</td><td>' + r.to + '</td><td>' + r.demand + '</td><td>' + copperToGSC(r.profitCopper) + '</td><td>' + r.labor + '</td><td><strong>' + (r.sPerL/100).toFixed(2) + ' s/l</strong></td>';
   tbody.appendChild(tr);
   showIngredientBox(r);
@@ -379,8 +351,8 @@ function clearRoutes(){ comparisonResults=[]; updateComparisonTable(); document.
 try{
   document.getElementById('fromSelect').addEventListener('change', updatePackDropdown);
   document.getElementById('toSelect').addEventListener('change', updateWarCheckbox);
-  document.getElementById('calcBtn').addEventListener('click', function(){ const res = calculatePack(true); if(!res) {} });
-  document.getElementById('addBtn').addEventListener('click', function(){ if(packData.length===0){ showError('Data not loaded yet. Please wait or host the page'); return; } addRoute(); });
+  document.getElementById('calcBtn').addEventListener('click', function(){ calculatePack(true); });
+  document.getElementById('addBtn').addEventListener('click', function(){ if(packData.length===0){ showError('Data not loaded yet.'); return; } addRoute(); });
   document.getElementById('clearBtn').addEventListener('click', clearRoutes);
 }catch(e){}
 
@@ -400,14 +372,7 @@ async function init(){
     const toSel = document.getElementById('toSelect');
     toSel.innerHTML = '<option value=""></option>';
     DESTINATIONS.forEach(d=> toSel.add(new Option(d,d)));
-    try{
-      document.getElementById('fromSelect').addEventListener('change', updatePackDropdown);
-      document.getElementById('toSelect').addEventListener('change', updateWarCheckbox);
-      document.getElementById('calcBtn').addEventListener('click', function(){calculatePack(true)});
-      document.getElementById('addBtn').addEventListener('click', addRoute);
-      document.getElementById('clearBtn').addEventListener('click', clearRoutes);
-    }catch(e){console.warn('Could not attach event listeners in init', e)}
-  }catch(err){ console.error(err); showError('Failed to load sheet data. If opening locally use a server or host on GitHub Pages.'); }
+  }catch(err){ console.error(err); showError('Failed to load sheet data.'); }
 }
 
 init();
