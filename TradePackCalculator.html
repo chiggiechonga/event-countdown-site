@@ -55,6 +55,7 @@
         <div class="input-group"><label for="packSelect">Pack:</label><select id="packSelect"><option value=""></option></select></div>
         <div class="input-group"><label for="toSelect">To:</label><select id="toSelect"><option value=""></option></select></div>
         <div class="input-group"><label for="demandInput">Demand (%):</label><input type="number" id="demandInput" value="130" min="0" step="1"></div>
+        <div class="input-group"><label for="proficiencyInput">Proficiency (%):</label><input type="number" id="proficiencyInput" value="0" min="0" max="30" step="1"></div>
       </div>
 
       <div class="checkbox-row">
@@ -132,10 +133,15 @@ function showError(msg){alert(msg);}
 
 function buildPackDataFromSheet(rows){
   packData = [];
+  const destRows = {
+    'Solis': 0,
+    'Villanelle': 17,
+    'Ynystere': 33
+  };
+  
   for(const dest of Object.keys(REGION_ORDER)){
-    let headerIndex = rows.findIndex(r=> (r[0]||'').toLowerCase() === dest.toLowerCase());
-    if(headerIndex === -1) continue;
-    console.log('Found ' + dest + ' header at row ' + headerIndex);
+    const headerIndex = destRows[dest];
+    console.log('Using ' + dest + ' header at row ' + headerIndex);
     const start = headerIndex + 2;
     const expected = REGION_ORDER[dest].length;
     for(let i=0;i<expected;i++){
@@ -237,6 +243,7 @@ function calculatePack(showDetails){
   const packName = document.getElementById('packSelect').value;
   const to = document.getElementById('toSelect').value;
   const demandPct = parseFloat(document.getElementById('demandInput').value) || 130;
+  const proficiencyPct = parseFloat(document.getElementById('proficiencyInput').value) || 0;
   const premium = document.getElementById('premiumCheck').checked;
   const own = document.getElementById('supplyOwnCheck').checked;
   const war = document.getElementById('warCheck') ? document.getElementById('warCheck').checked : false;
@@ -289,7 +296,9 @@ function calculatePack(showDetails){
   const craftingCopper = craftingSilver * 100;
 
   const profitCopper = turnInCopper - ingredientCopper - craftingCopper;
-  const labor = 125;
+  const baseLaborCost = 60;
+  const proficiencyReduction = Math.floor(baseLaborCost * (proficiencyPct / 100));
+  const labor = 60 + 65 - proficiencyReduction;
   const sPerL = profitCopper / labor;
   
   console.log('Turn-in value:', turnInCopper);
