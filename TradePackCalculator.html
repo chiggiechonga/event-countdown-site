@@ -298,6 +298,15 @@ function updateComparisonTable(){
 
 function clearRoutes(){ comparisonResults=[]; updateComparisonTable(); document.getElementById('ingredientBox').style.display='none'; }
 
+// attach UI event listeners immediately so buttons work even if fetch fails
+try{
+  document.getElementById('fromSelect').addEventListener('change', updatePackDropdown);
+  document.getElementById('toSelect').addEventListener('change', updateWarCheckbox);
+  document.getElementById('calcBtn').addEventListener('click', ()=>{ const res = calculatePack(true); if(!res) {/* silent */} });
+  document.getElementById('addBtn').addEventListener('click', ()=>{ if(packData.length===0){ showError('Data not loaded yet. Please wait or host the page'); return; } addRoute(); });
+  document.getElementById('clearBtn').addEventListener('click', clearRoutes);
+}catch(e){ /* elements may not exist yet in rare cases; will attach in init as fallback */ }
+
 // Initialization: fetch sheets and build data
 async function fetchText(url){ const res = await fetch(url); if(!res.ok) throw new Error('HTTP '+res.status); return await res.text(); }
 async function init(){
@@ -312,12 +321,14 @@ async function init(){
     sortAndPopulateFrom();
     // populate To dropdown blank + options
     const toSel = document.getElementById('toSelect'); toSel.innerHTML = '<option value=""></option>'; DESTINATIONS.forEach(d=> toSel.add(new Option(d,d)));
-    // wire events
-    document.getElementById('fromSelect').addEventListener('change', updatePackDropdown);
-    document.getElementById('toSelect').addEventListener('change', updateWarCheckbox);
-    document.getElementById('calcBtn').addEventListener('click', ()=>calculatePack(true));
-    document.getElementById('addBtn').addEventListener('click', addRoute);
-    document.getElementById('clearBtn').addEventListener('click', clearRoutes);
+    // wire events in case previous attach failed
+    try{
+      document.getElementById('fromSelect').addEventListener('change', updatePackDropdown);
+      document.getElementById('toSelect').addEventListener('change', updateWarCheckbox);
+      document.getElementById('calcBtn').addEventListener('click', ()=>calculatePack(true));
+      document.getElementById('addBtn').addEventListener('click', addRoute);
+      document.getElementById('clearBtn').addEventListener('click', clearRoutes);
+    }catch(e){console.warn('Could not attach event listeners in init', e)}
   }catch(err){ console.error(err); showError('Failed to load sheet data. If opening locally use a server or host on GitHub Pages.'); }
 }
 
