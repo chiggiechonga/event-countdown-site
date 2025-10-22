@@ -297,9 +297,9 @@ function calculatePack(showDetails){
   const craftingCopper = craftingSilver * 100;
 
   const profitCopper = turnInCopper - ingredientCopper - craftingCopper;
-  const baseLaborCost = 60;
+  const baseLaborCost = 180;
   const proficiencyReduction = Math.floor(baseLaborCost * (proficiencyPct / 100));
-  const labor = 60 + 65 - proficiencyReduction;
+  const labor = 180 + 70 - proficiencyReduction;
   const sPerL = profitCopper / labor;
   
   console.log('=== Calculation Breakdown ===');
@@ -395,3 +395,4 @@ init();
 </script>
 </body>
 </html>
+
